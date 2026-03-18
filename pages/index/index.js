@@ -233,7 +233,7 @@ Page({
     feishu.getRecords().then(records => {
       let plants = this.processRecords(records)
       // 过滤当前用户的植物（包括没有设置用户ID的旧数据）
-      plants = plants.filter(p => !p.userId || p.userId === userId)
+      plants = plants.filter(p => p.userId && p.userId === userId)
       if (plants.length === 0) {
         plants = this.getMockData()
       }

@@ -169,10 +169,21 @@ page {
 
 .plant-poison {
   font-size: 20rpx;
-  background: #FFEBEE;
-  color: #C62828;
   padding: 4rpx 10rpx;
   border-radius: 6rpx;
+}
+.plant-poison.轻微刺激 { background: #FFF8E1; color: #F57F17; }
+.plant-poison.中度刺激 { background: #FFF3E0; color: #E65100; }
+.plant-poison.强烈刺激 { background: #FFEBEE; color: #C62828; }
+
+.toxic-info {
+  color: #E65100 !important;
+  font-size: 22rpx !important;
+  background: #FFF8E1;
+  padding: 8rpx 12rpx;
+  border-radius: 8rpx;
+  margin-top: 8rpx;
+  line-height: 1.5 !important;
 }
 
 .plant-location {

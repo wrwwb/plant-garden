@@ -36,7 +36,7 @@ Page({
         wx.request({
           url: `https://wttr.in/${res.latitude},${res.longitude}?format=j1`,
           success: (weatherRes) => {
-            const data = weatherRes.data
+            const data = weatherRes.data || {}
             // 计算推荐浇水间隔
             let totalRain = 0, avgTemp = 0, avgHumidity = 0, days = 0
             try {
@@ -173,26 +173,28 @@ Page({
         wx.request({
           url: `https://wttr.in/${res.latitude},${res.longitude}?format=j1`,
           success(weatherRes) {
-            const w = weatherRes.data.current_condition[0]
-            const temp = w.temp_C
-            const humidity = w.humidity
-            const weather = w.weatherDesc[0].value
+            const data = weatherRes.data || {}
+            const current = (data.current_condition || [])[0] || {}
+            const temp = current.temp_C || '--'
+            const humidity = current.humidity || '--'
+            const weather = (current.weatherDesc || [])[0] || {}
+            const weatherText = weather.value || '未知'
             // 获取城市名
-            const area = weatherRes.data.nearest_area[0]
-            const city = area ? (area.areaName ? area.areaName[0].value : area.region[0].value) : '未知'
+            const area = (data.nearest_area || [])[0] || {}
+            const city = area.areaName ? area.areaName[0].value : (area.region ? area.region[0].value : '未知')
             
             // 计算推荐浇水频率
             const waterFreq = that.calculateWaterFreq(weatherRes.data)
             
             let icon = '☀️'
-            if (weather.includes('rain') || weather.includes('雨')) icon = '🌧️'
-            else if (weather.includes('cloud') || weather.includes('云')) icon = '☁️'
-            else if (weather.includes('snow') || weather.includes('雪')) icon = '❄️'
-            else if (weather.includes('fog') || weather.includes('雾')) icon = '🌫️'
-            else if (weather.includes('sun') || weather.includes('晴')) icon = '☀️'
+            if (weatherText.includes('rain') || weatherText.includes('雨')) icon = '🌧️'
+            else if (weatherText.includes('cloud') || weatherText.includes('云')) icon = '☁️'
+            else if (weatherText.includes('snow') || weatherText.includes('雪')) icon = '❄️'
+            else if (weatherText.includes('fog') || weatherText.includes('雾')) icon = '🌫️'
+            else if (weatherText.includes('sun') || weatherText.includes('晴')) icon = '☀️'
             
             that.setData({
-              localWeather: `${city} ${temp}°C · ${weather} · 湿度${humidity}%`,
+              localWeather: `${city} ${temp}°C · ${weatherText} · 湿度${humidity}%`,
               weatherIcon: icon,
               recommendedWaterFreq: waterFreq
             })
@@ -210,10 +212,14 @@ Page({
         wx.request({
           url: 'https://wttr.in/?format=j1',
           success(res) {
-            const w = res.data.current_condition[0]
-            const waterFreq = that.calculateWaterFreq(res.data)
+            const w = (res.data || {}).current_condition || []
+            const current = w[0] || {}
+            const temp = Array.isArray(current.temp_C) ? current.temp_C[0] : (current.temp_C || '--')
+            const weather = Array.isArray(current.weatherDesc) ? (current.weatherDesc[0] || {}).value : (current.weatherDesc || '--')
+            const weatherText = Array.isArray(weather) ? weather[0] : weather
+            const waterFreq = that.calculateWaterFreq(res.data || {})
             that.setData({
-              localWeather: `${w.temp_C[0]}°C · ${w.weatherDesc[0].value[0]}`,
+              localWeather: `${temp}°C · ${weatherText}`,
               recommendedWaterFreq: waterFreq
             })
           },

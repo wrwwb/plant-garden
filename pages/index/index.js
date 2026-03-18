@@ -274,10 +274,13 @@ Page({
       const needFertilizer = nextFertilizerTime && nextFertilizerTime <= today
 
       const getText = (val) => {
-        if (!val) return '-'
+        if (val === null || val === undefined) return '-'
         if (typeof val === 'string') return val
-        if (Array.isArray(val) && val.length > 0 && val[0]) {
-          return val[0].text || '-'
+        if (typeof val === 'number') return String(val)
+        if (Array.isArray(val) && val.length > 0) {
+          const first = val[0]
+          if (first && typeof first === 'object' && first.text) return first.text
+          if (typeof first === 'string') return first
         }
         return '-'
       }

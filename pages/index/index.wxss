@@ -167,14 +167,10 @@ page {
   color: #333;
 }
 
-.plant-poison {
-  font-size: 20rpx;
-  padding: 4rpx 10rpx;
-  border-radius: 6rpx;
-}
-.plant-poison.轻微刺激 { background: #FFF8E1; color: #F57F17; }
-.plant-poison.中度刺激 { background: #FFF3E0; color: #E65100; }
-.plant-poison.强烈刺激 { background: #FFEBEE; color: #C62828; }
+.plant-poison { font-size: 20rpx; padding: 4rpx 10rpx; border-radius: 6rpx; }
+.toxic-light { background: #FFF8E1; color: #F57F17; }
+.toxic-medium { background: #FFF3E0; color: #E65100; }
+.toxic-strong { background: #FFEBEE; color: #C62828; }
 
 .toxic-info {
   color: #E65100 !important;

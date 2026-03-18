@@ -159,7 +159,5 @@ module.exports = [
   {name: "橡皮树紫叶", location: "客厅", waterFreq: "5-7天/次（视温度湿度调整）", light: "散射光", temperature: "15-28℃", fertilizer: "生长期每2周一次", humidity: "喜湿润", isToxic: true, toxicityLevel: "中度刺激", toxicitySource: "汁液含皂苷，接触可能引起皮肤刺激"},
   {name: "巴西木荷花", location: "客厅", waterFreq: "7-10天/次（视温度湿度调整）", light: "散射光", temperature: "18-28℃", fertilizer: "生长期每月一次", humidity: "中等湿度", isToxic: true, toxicityLevel: "中度刺激", toxicitySource: "汁液含皂苷类，误食引起肠胃刺激"},
   {name: "巴西木金心", location: "客厅", waterFreq: "7-10天/次（视温度湿度调整）", light: "散射光", temperature: "18-28℃", fertilizer: "生长期每月一次", humidity: "中等湿度", isToxic: true, toxicityLevel: "中度刺激", toxicitySource: "汁液含皂苷类，误食引起肠胃刺激"},
-  {name: "巴西木银边", location: "客厅", waterFreq: "7-10天/次（视温度湿度调整）", light: "散射光", temperature: "18-28℃", fertilizer: "生长期每月一次", humidity: "中等湿度", isToxic: true, toxicityLevel: "中度刺激", toxicitySource: "汁液含皂苷类，误食引起肠胃刺激"}
-]
-
+  {name: "巴西木银边", location: "客厅", waterFreq: "7-10天/次（视温度湿度调整）", light: "散射光", temperature: "18-28℃", fertilizer: "生长期每月一次", humidity: "中等湿度", isToxic: true}, toxicityLevel: "中度刺激", toxicitySource: "汁液含皂苷类，误食引起肠胃刺激"}
 ]

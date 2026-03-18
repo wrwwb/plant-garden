@@ -58,7 +58,10 @@
       <view class="plant-header">
         <view class="plant-title">
           <text class="plant-name">{{item.name}}</text>
-          <text wx:if="{{item.toxicityLevel !== '无刺激'}}" class="plant-poison {{item.toxicityLevel}}">⚠️ {{item.toxicityLevel}}</text>
+          <text wx:if="{{item.toxicityLevel === '轻微刺激'}}" class="plant-poison toxic-light">⚠️ {{item.toxicityLevel}}</text>
+          <text wx:elif="{{item.toxicityLevel === '中度刺激'}}" class="plant-poison toxic-medium">⚠️ {{item.toxicityLevel}}</text>
+          <text wx:elif="{{item.toxicityLevel === '强烈刺激'}}" class="plant-poison toxic-strong">⚠️ {{item.toxicityLevel}}</text>
+          <text wx:elif="{{item.toxicityLevel !== '无刺激'}}" class="plant-poison">⚠️ {{item.toxicityLevel}}</text>
         </view>
         <view class="plant-location">📍 {{item.location}}</view>
       </view>

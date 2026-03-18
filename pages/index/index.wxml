@@ -1,0 +1,99 @@
+<view class="container">
+  <!-- 天气提示 -->
+  <view class="weather-banner">
+    <text class="icon">{{weatherIcon}}</text>
+    <text>{{localWeather}}</text>
+  </view>
+
+  <!-- 用户设置 -->
+  <view class="user-setting" bindtap="setUserId">
+    <text>👤 当前用户: {{currentUserId || '点击设置'}}</text>
+  </view>
+
+  <!-- 统计 -->
+  <view class="stats-grid">
+    <view class="stat-card">
+      <view class="stat-number">{{plants.length}}</view>
+      <view class="stat-label">🌸 植物总数</view>
+    </view>
+    <view class="stat-card" bindtap="scrollToWater">
+      <view class="stat-number">{{needWaterCount}}</view>
+      <view class="stat-label">💧 待浇水</view>
+    </view>
+    <view class="stat-card" bindtap="scrollToFertilizer">
+      <view class="stat-number">{{needFertilizerCount}}</view>
+      <view class="stat-label">🌱 待施肥</view>
+    </view>
+  </view>
+
+  <!-- 添加按钮 -->
+  <view class="add-btn" bindtap="goToAdd">
+    <text class="btn-icon">➕</text>
+    <text class="btn-text">添加植物</text>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="loading">
+    <text>加载中...</text>
+  </view>
+
+  <!-- 错误提示 -->
+  <view wx:elif="{{error}}" class="error">
+    <text>⚠️ {{error}}</text>
+  </view>
+
+  <!-- 空状态提示 -->
+  <view wx:elif="{{!loading && !error && plants.length === 0}}" class="empty-state">
+    <view class="empty-icon">🌱</view>
+    <view class="empty-title">还没有植物呢</view>
+    <view class="empty-desc">点击下方「添加植物」开始记录你的植物吧~</view>
+  </view>
+
+  <!-- 植物列表 -->
+  <scroll-view wx:else scroll-y="true" scroll-into-view="{{scrollIntoView}}" class="plant-scroll">
+    <view class="section">
+      <view class="section-title">🌿 我的植物们</view>
+      
+      <view wx:for="{{plants}}" wx:key="recordId" id="plant-{{index}}" class="plant-card {{item.needWater ? 'urgent' : ''}}" bindtouchstart="touchStart" bindtouchmove="touchMove" data-index="{{index}}" style="{{item.isSwiping ? 'transform: translateX(-160rpx)' : ''}}">
+      <view class="plant-header">
+        <view class="plant-title">
+          <text class="plant-name">{{item.name}}</text>
+          <text wx:if="{{item.isToxic}}" class="plant-poison">☠️ 有毒</text>
+        </view>
+        <view class="plant-location">📍 {{item.location}}</view>
+      </view>
+      
+      <view class="plant-info">
+        <view class="info-line">💧 浇水频率: {{item.waterFrequency}}</view>
+        <view class="info-line">🌱 施肥: {{item.fertilizer}}</view>
+        <view class="info-line">☀️ 光照: {{item.light}}</view>
+        <view class="info-line">🌡️ 温度: {{item.temperature}}</view>
+        <view class="info-line">💨 湿度: {{item.humidity}}</view>
+      </view>
+
+      <view class="time-section">
+        <view class="time-item">
+          <view class="time-label">上次浇水</view>
+          <view class="time-value">{{item.lastWaterTime}}</view>
+        </view>
+        <view class="time-item">
+          <view class="time-label">下次浇水</view>
+          <view class="time-value {{item.needWater ? 'urgent' : ''}}">{{item.nextWaterTime}}</view>
+        </view>
+        <view class="time-item">
+          <view class="time-label">下次施肥</view>
+          <view class="time-value {{item.needFertilizer ? 'urgent' : ''}}">{{item.nextFertilizerTime}}</view>
+        </view>
+      </view>
+
+      <view class="plant-actions">
+        <button class="btn water-btn" bindtap="waterPlant" data-id="{{item.recordId}}" data-name="{{item.name}}">💧 浇水</button>
+        <button class="btn fertilizer-btn" bindtap="fertilizePlant" data-id="{{item.recordId}}" data-name="{{item.name}}">🌱 施肥</button>
+      </view>
+      
+      <!-- 删除按钮 -->
+      <view class="delete-btn" catchtap="deletePlant" data-id="{{item.recordId}}" data-name="{{item.name}}">🗑️ 删除</view>
+    </view>
+    </view>
+  </scroll-view>
+</view>

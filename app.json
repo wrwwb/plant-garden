@@ -1,7 +1,9 @@
 {
   "pages": [
     "pages/index/index",
-    "pages/add/add"
+    "pages/add/add",
+    "pages/init/init",
+    "pages/init-ref/init-ref"
   ],
   "window": {
     "backgroundTextStyle": "light",
@@ -17,6 +19,7 @@
   "requiredPrivateInfos": [
     "getLocation"
   ],
+  "cloud_db": true,
   "style": "v2",
   "sitemapLocation": "sitemap.json"
 }

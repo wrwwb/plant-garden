@@ -1,0 +1,13 @@
+<view class="container">
+  <view class="title">📚 参考植物库初始化</view>
+  <view class="desc">上传161种参考植物到云数据库</view>
+  <view class="status">{{status}}</view>
+  <view class="section">
+    <button type="warn" bindtap="uploadBatch">🚀 批量上传参考植物</button>
+    <button bindtap="checkRef">🔍 查询确认</button>
+  </view>
+  <view class="log-container">
+    <view wx:for="{{logs}}" wx:key="index" class="log-item">{{item}}</view>
+  </view>
+  <button bindtap="goHome">返回</button>
+</view>

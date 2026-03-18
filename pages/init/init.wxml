@@ -1,0 +1,23 @@
+<view class="container">
+  <view class="title">🔧 数据初始化</view>
+  
+  <view class="desc">第一次使用需要初始化数据，请按顺序点击以下按钮：</view>
+
+  <view class="section">
+    <view class="section-title">第一步：上传我的植物（7株）</view>
+    <button type="primary" bindtap="uploadMyPlants">🌱 上传我的植物</button>
+  </view>
+
+  <view class="section">
+    <view class="section-title">第二步：查询确认</view>
+    <button bindtap="checkMyPlants">🔍 查询我的植物</button>
+  </view>
+
+  <view class="log-container">
+    <view class="log-title">日志：</view>
+    <view wx:for="{{logs}}" wx:key="index" class="log-item">{{item}}</view>
+  </view>
+
+  <view class="tip">初始化完成后可删除此页面</view>
+  <button bindtap="goHome">返回首页</button>
+</view>

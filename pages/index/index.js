@@ -1,4 +1,4 @@
-const feishu = require('../../utils/feishu.js')
+const clouddb = require('../../utils/clouddb.js')
 
 Page({
   data: {
@@ -234,12 +234,7 @@ Page({
   loadPlants() {
     this.setData({ loading: true, error: '' })
     
-    const userId = wx.getStorageSync('userId') || 'default'
-    
-    feishu.getRecords().then(records => {
-      let plants = this.processRecords(records)
-      // 过滤当前用户的植物（包括没有设置用户ID的旧数据）
-      plants = plants.filter(p => p.userId && p.userId === userId)
+    clouddb.getPlants().then(plants => {
       if (plants.length === 0) {
         plants = this.getMockData()
       }
@@ -247,18 +242,13 @@ Page({
         plants,
         needWaterCount: plants.filter(p => p.needWater).length,
         needFertilizerCount: plants.filter(p => p.needFertilizer).length,
-        loading: false,
-        currentUserId: userId
+        loading: false
       })
     }).catch(err => {
-      const plants = this.getMockData().filter(p => p.userId === userId)
+      console.error('加载植物失败:', err)
       this.setData({
-        plants,
-        needWaterCount: plants.filter(p => p.needWater).length,
-        needFertilizerCount: plants.filter(p => p.needFertilizer).length,
         loading: false,
-        error: '数据加载失败',
-        currentUserId: userId
+        error: '数据加载失败'
       })
     })
   },
@@ -266,18 +256,17 @@ Page({
   processRecords(records) {
     if (!records || records.length === 0) return []
     
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const now = Date.now()
+    const today = new Date(now)
 
-    return records.map(record => {
-      const fields = record.fields || {}
+    return records.map(r => {
+      const f = r.fields || r
+      const lastWaterTime = f['浇水时间'] ? new Date(f['浇水时间']) : new Date(now - 7 * 24 * 60 * 60 * 1000)
+      const nextWaterTime = f['下次浇水时间'] ? new Date(f['下次浇水时间']) : new Date(now + 7 * 24 * 60 * 60 * 1000)
+      const nextFertilizerTime = f['下次施肥时间'] ? new Date(f['下次施肥时间']) : new Date(now + 30 * 24 * 60 * 60 * 1000)
       
-      const lastWaterTime = fields['浇水时间'] ? new Date(fields['浇水时间']) : null
-      const nextWaterTime = fields['下次浇水时间'] ? new Date(fields['下次浇水时间']) : null
-      const nextFertilizerTime = fields['下次施肥时间'] ? new Date(fields['下次施肥时间']) : null
-
-      const needWater = nextWaterTime && nextWaterTime <= today
-      const needFertilizer = nextFertilizerTime && nextFertilizerTime <= today
+      const needWater = nextWaterTime <= today
+      const needFertilizer = nextFertilizerTime <= today
 
       const getText = (val) => {
         if (val === null || val === undefined) return '-'
@@ -292,17 +281,16 @@ Page({
       }
 
       return {
-        recordId: record.record_id,
-        userId: getText(fields['用户ID']),
-        name: getText(fields['花名']),
-        location: getText(fields['推荐摆放位置']),
-        waterFrequency: getText(fields['浇水频率']),
-        fertilizer: getText(fields['施肥']),
-        light: getText(fields['光照要求']),
-        temperature: getText(fields['温度要求']),
-        humidity: getText(fields['湿度/特殊注意事项']),
-        toxicityLevel: getText(fields['毒性安全等级']) || '无刺激',
-        toxicitySource: getText(fields['备注']) || '',
+        recordId: r._id || r.recordId || '',
+        name: getText(f['花名']),
+        location: getText(f['推荐摆放位置']),
+        waterFrequency: getText(f['浇水频率']),
+        fertilizer: getText(f['施肥']),
+        light: getText(f['光照要求']),
+        temperature: getText(f['温度要求']),
+        humidity: getText(f['湿度/特殊注意事项']),
+        toxicityLevel: getText(f['毒性安全等级']) || '无刺激',
+        toxicitySource: getText(f['备注']) || '',
         lastWaterTime: this.formatDate(lastWaterTime),
         nextWaterTime: this.formatDate(nextWaterTime),
         nextFertilizerTime: this.formatDate(nextFertilizerTime),
@@ -354,9 +342,9 @@ Page({
     wx.showLoading({ title: '更新中...' })
     const nextWaterTime = Date.now() + 7 * 24 * 60 * 60 * 1000
     
-    feishu.updateRecord(recordId, {
-      '浇水时间': Date.now(),
-      '下次浇水时间': nextWaterTime
+    clouddb.updatePlant(recordId, {
+      '浇水时间': new Date(),
+      '下次浇水时间': new Date(nextWaterTime)
     }).then(() => {
       wx.hideLoading()
       wx.showToast({ title: `💧 ${name} 浇水成功！` })
@@ -371,8 +359,8 @@ Page({
     wx.showLoading({ title: '更新中...' })
     const nextFertilizerTime = Date.now() + 30 * 24 * 60 * 60 * 1000
     
-    feishu.updateRecord(recordId, {
-      '下次施肥时间': nextFertilizerTime
+    clouddb.updatePlant(recordId, {
+      '下次施肥时间': new Date(nextFertilizerTime)
     }).then(() => {
       wx.hideLoading()
       wx.showToast({ title: `🌱 ${name} 施肥成功！` })
@@ -468,7 +456,7 @@ Page({
   doDeletePlant(recordId, name) {
     wx.showLoading({ title: '删除中...' })
     
-    feishu.deleteRecord(recordId).then(() => {
+    clouddb.deletePlant(recordId).then(() => {
       wx.hideLoading()
       wx.showToast({ title: '已删除' })
       this.loadPlants()

@@ -1,4 +1,4 @@
-const feishu = require('../../utils/feishu.js')
+const clouddb = require('../../utils/clouddb.js')
 
 // 植物库
 const plantDatabase = require('../../utils/plants.js')
@@ -88,7 +88,7 @@ Page({
     temperature: '',
     fertilizer: '',
     humidity: '',
-    isToxic: false,
+    toxicityLevel: '无刺激',
     searchText: '',
     selectedIndex: 0,
     showDropdown: false,
@@ -176,7 +176,7 @@ Page({
       temperature: plant.temperature,
       fertilizer: plant.fertilizer,
       humidity: plant.humidity,
-      isToxic: plant.isToxic,
+      toxicityLevel: plant.toxicityLevel || '无刺激',
       waterFreqIndex: freqIndex,
       selectedIndex: idx,
       searchText: plant.name,
@@ -201,7 +201,6 @@ Page({
   onTempInput(e) { this.setData({ temperature: e.detail.value }) },
   onFertilizerInput(e) { this.setData({ fertilizer: e.detail.value }) },
   onHumidityInput(e) { this.setData({ humidity: e.detail.value }) },
-  onToxicChange(e) { this.setData({ isToxic: e.detail.value }) },
   onWaterFreqChange(e) { this.setData({ waterFreqIndex: e.detail.value }) },
 
   goBack() {
@@ -216,25 +215,23 @@ Page({
 
     wx.showLoading({ title: '保存中...' })
     const now = Date.now()
-    const userId = wx.getStorageSync('userId') || 'default'
 
-    const fields = {
+    const plant = {
       '花名': this.data.name,
-      '用户ID': userId,
       '推荐摆放位置': this.data.location || '-',
       '浇水频率': this.data.waterFreqList[this.data.waterFreqIndex],
-      '浇水时间': now,
-      '下次浇水时间': now + 7 * 24 * 60 * 60 * 1000,
-      '下次施肥时间': now + 30 * 24 * 60 * 60 * 1000,
+      '浇水时间': new Date(now),
+      '下次浇水时间': new Date(now + 7 * 24 * 60 * 60 * 1000),
+      '下次施肥时间': new Date(now + 30 * 24 * 60 * 60 * 1000),
       '光照要求': this.data.light || '-',
       '温度要求': this.data.temperature || '-',
       '施肥': this.data.fertilizer || '-',
       '湿度/特殊注意事项': this.data.humidity || '-',
-      '是否有毒': this.data.isToxic ? '有毒' : '无毒',
-      '买入时间': now
+      '毒性安全等级': this.data.toxicityLevel || '无刺激',
+      '买入时间': new Date(now)
     }
 
-    feishu.createRecord(fields).then(() => {
+    clouddb.addPlant(plant).then(() => {
       wx.hideLoading()
       wx.showToast({ title: '添加成功！🎉' })
       setTimeout(() => wx.navigateBack(), 1500)

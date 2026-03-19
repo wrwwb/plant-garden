@@ -86,9 +86,9 @@ function addPlant(plant) {
       db.collection('plants').add({
         data: {
           ...plant,
-          _openid: userId,
           createdAt: db.serverDate(),
           updatedAt: db.serverDate()
+          // 注意：_openid 由云数据库自动填充，不要手动传入
         },
         success: res => {
           resolve(res)
@@ -140,23 +140,21 @@ function deletePlant(id) {
 // 批量添加用户植物
 function batchAddPlants(plants) {
   return new Promise((resolve, reject) => {
-    getUserId().then(userId => {
-      const db = getDB()
-      if (!db) return reject(new Error('cloud db not available'))
-      const tasks = plants.map(plant => {
-        return db.collection('plants').add({
-          data: {
-            ...plant,
-            _openid: userId,
-            createdAt: db.serverDate(),
-            updatedAt: db.serverDate()
-          }
-        })
+    const db = getDB()
+    if (!db) return reject(new Error('cloud db not available'))
+    const tasks = plants.map(plant => {
+      return db.collection('plants').add({
+        data: {
+          ...plant,
+          createdAt: db.serverDate(),
+          updatedAt: db.serverDate()
+          // _openid 由云数据库自动填充
+        }
       })
-      Promise.all(tasks)
-        .then(res => resolve(res))
-        .catch(err => reject(err))
     })
+    Promise.all(tasks)
+      .then(res => resolve(res))
+      .catch(err => reject(err))
   })
 }
 

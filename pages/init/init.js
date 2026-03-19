@@ -62,6 +62,13 @@ Page({
       try {
         const plant = {
           name: p.name,
+          scientificName: p.scientificName || '',
+          family: p.family || '',
+          origin: p.origin || '',
+          growthSeason: p.growthSeason || '',
+          heatResist: p.heatResist || '',
+          coldResist: p.coldResist || '',
+          soil: p.soil || '',
           location: p.location,
           waterFrequency: p.waterFrequency,
           light: p.light,
@@ -72,13 +79,13 @@ Page({
           toxicitySource: p.toxicitySource,
           waterInterval: p.waterInterval,
           '浇水时间': new Date(),
-          '下次浇水时间': parseDate(p.nextWater),
-          '下次施肥时间': parseDate(p.nextFertilizer)
+          '下次浇水时间': p.nextWater ? parseDate(p.nextWater) : new Date(),
+          '下次施肥时间': p.nextFertilizer ? parseDate(p.nextFertilizer) : new Date()
         }
         await clouddb.addPlant(plant)
         this.log('✓ ' + p.name + ' 上传成功')
       } catch (e) {
-        this.log('✗ ' + p.name + ' 失败: ' + (e.message || e.errMsg))
+        this.log('✗ ' + p.name + ' 失败: ' + (e.message || e.errMsg || JSON.stringify(e)))
       }
       await new Promise(r => setTimeout(r, 500))
     }

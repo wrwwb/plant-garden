@@ -10,7 +10,8 @@ Page({
     needFertilizerCount: 0,
     loading: true,
     error: '',
-    scrollIntoView: ''
+     currentUserId: '',
+    cityName: ''
   },
 
   // 定时检查：每天首次打开时更新所有植物的下次浇水时间
@@ -34,29 +35,12 @@ Page({
       type: 'wgs84',
       success: (res) => {
         wx.request({
-          url: `https://wttr.in/${res.latitude},${res.longitude}?format=j1`,
+          url: `https://api.open-meteo.com/v1/forecast?latitude=${res.latitude}&longitude=${res.longitude}&hourly=temperature_2m,relative_humidity_2m,precipitation&forecast_days=3&timezone=Asia/Shanghai`,
           success: (weatherRes) => {
-            const data = weatherRes.data || {}
-            // 计算推荐浇水间隔
-            let totalRain = 0, avgTemp = 0, avgHumidity = 0, days = 0
             try {
-              const forecast = data.weather || []
-              for (let i = 0; i < Math.min(3, forecast.length); i++) {
-                const day = forecast[i]
-                if (day.hourly) {
-                  for (let h = 0; h < day.hourly.length; h++) {
-                    const hour = day.hourly[h]
-                    totalRain += parseFloat(hour.precipMM || '0')
-                    avgTemp += parseFloat(hour.temp_C || '20')
-                    avgHumidity += parseInt(hour.humidity || '50')
-                    days++
-                  }
-                }
-              }
-              if (days > 0) {
-                avgTemp = avgTemp / days
-                avgHumidity = avgHumidity / days
-              }
+              const data = weatherRes.data || {}
+              const waterFreq = this.calculateWaterFreq(data)
+              this.setData({ recommendedWaterFreq: waterFreq })
             } catch(e) {}
           }
         })
@@ -73,74 +57,54 @@ Page({
   },
 
   initUserId() {
-    const that = this
-    wx.login({
-      success(res) {
-        // 通过 wx.login 获取 openid（需要后台配合）
-        // 这里先用本地存储，如果已有用户ID就用已有的
-        const userId = wx.getStorageSync('userId')
-        if (!userId) {
-          // 生成随机ID（实际项目应该通过后台获取openid）
-          const newId = 'user_' + Date.now()
-          wx.setStorageSync('userId', newId)
-          that.setData({ currentUserId: newId })
-        } else {
-          that.setData({ currentUserId: userId })
-        }
-      }
-    })
+    const userId = wx.getStorageSync('userId')
+    if (userId) {
+      this.setData({ currentUserId: userId })
+    } else {
+      const newId = 'user_' + Date.now()
+      wx.setStorageSync('userId', newId)
+      this.setData({ currentUserId: newId })
+    }
   },
 
   onShow() {
     this.loadPlants()
   },
 
-  // 根据天气计算推荐浇水频率
   calculateWaterFreq(weatherData) {
     try {
-      const forecast = weatherData.weather || []
+      // Open-Meteo 格式: hourly.temperature_2m, relative_humidity_2m, precipitation
+      const hourly = weatherData.hourly || {}
+      const temps = hourly.temperature_2m || []
+      const humidities = hourly.relative_humidity_2m || []
+      const precip = hourly.precipitation || []
+
+      if (temps.length === 0) return '5-6天/次'
+
+      // 取未来 72 小时（3天）的数据
       let totalRain = 0
       let avgTemp = 0
       let avgHumidity = 0
-      let days = 0
-      
-      for (let i = 0; i < Math.min(3, forecast.length); i++) {
-        const day = forecast[i]
-        if (day.hourly) {
-          for (let h = 0; h < day.hourly.length; h++) {
-            const hour = day.hourly[h]
-            const precip = parseFloat(hour.precipMM || '0')
-            totalRain += precip
-            avgTemp += parseFloat(hour.temp_C || '20')
-            avgHumidity += parseInt(hour.humidity || '50')
-            days++
-          }
-        }
+      const count = Math.min(72, temps.length)
+
+      for (let i = 0; i < count; i++) {
+        avgTemp += temps[i]
+        avgHumidity += humidities[i]
+        totalRain += precip[i]
       }
-      
-      if (days > 0) {
-        avgTemp = avgTemp / days
-        avgHumidity = avgHumidity / days
-      }
-      
+      avgTemp /= count
+      avgHumidity /= count
+
       // 计算推荐浇水频率
-      let freq = 5 // 默认5天
-      
-      // 温度调整
+      let freq = 5
       if (avgTemp > 30) freq -= 2
       else if (avgTemp > 25) freq -= 1
       else if (avgTemp < 10) freq += 2
-      
-      // 湿度调整
       if (avgHumidity > 80) freq += 1
       else if (avgHumidity < 30) freq -= 1
-      
-      // 降雨调整
       if (totalRain > 10) freq += 1
       if (totalRain > 30) freq += 1
-      
       freq = Math.max(1, Math.min(15, freq))
-      
       return `${freq}-${freq + 1}天/次`
     } catch (e) {
       return '5-6天/次'
@@ -156,6 +120,7 @@ Page({
       success: (res) => {
         if (res.confirm && res.content) {
           wx.setStorageSync('userId', res.content)
+          this.setData({ currentUserId: res.content })
           wx.showToast({ title: '设置成功！' })
           this.loadPlants()
         }
@@ -164,69 +129,175 @@ Page({
   },
   getLocalWeather() {
     const that = this
-    
-    // 获取位置
     wx.getLocation({
       type: 'wgs84',
       success(res) {
-        // 使用免费天气API获取预报
-        wx.request({
-          url: `https://wttr.in/${res.latitude},${res.longitude}?format=j1`,
-          success(weatherRes) {
-            const data = weatherRes.data || {}
-            const current = (data.current_condition || [])[0] || {}
-            const temp = current.temp_C || '--'
-            const humidity = current.humidity || '--'
-            const weather = (current.weatherDesc || [])[0] || {}
-            const weatherText = weather.value || '未知'
-            // 获取城市名
-            const area = (data.nearest_area || [])[0] || {}
-            const city = area.areaName ? area.areaName[0].value : (area.region ? area.region[0].value : '未知')
-            
-            // 计算推荐浇水频率
-            const waterFreq = that.calculateWaterFreq(weatherRes.data)
-            
+        // 并行获取天气和城市名
+        const weatherTask = new Promise((resolve) => {
+          wx.request({
+            url: `https://api.open-meteo.com/v1/forecast?latitude=${res.latitude}&longitude=${res.longitude}&hourly=temperature_2m,relative_humidity_2m,precipitation,weather_code&forecast_days=3&timezone=Asia/Shanghai`,
+            success(weatherRes) { resolve(weatherRes.data) },
+            fail() { resolve(null) }
+          })
+        })
+        const cityTask = new Promise((resolve) => {
+          // 使用 ipapi.co 根据IP获取城市名（兼容微信）
+          wx.request({
+            url: `https://ipapi.co/json/`,
+            success(cityRes) {
+              try {
+                const d = cityRes.data || {}
+                resolve(d.city ? (d.city + (d.region ? ' ' + d.region : '')) : null)
+              } catch(e) { resolve(null) }
+            },
+            fail() { resolve(null) }
+          })
+        })
+        Promise.all([weatherTask, cityTask]).then(([data, cityName]) => {
+          try {
+            if (!data) { that.setData({ localWeather: '天气获取失败', recommendedWaterFreq: '5-6天/次' }); return }
+            const hourly = data.hourly || {}
+            const temps = hourly.temperature_2m || []
+            const humidities = hourly.relative_humidity_2m || []
+            const codes = hourly.weather_code || []
+            const now = new Date()
+            const hourStr = now.toISOString().slice(11, 13).padStart(2, '0') + ':00'
+            let idx = hourly.time ? hourly.time.indexOf(hourStr) : -1
+            if (idx < 0) idx = 0
+            const temp = temps[idx] || '--'
+            const humidity = humidities[idx] || '--'
+            const code = codes[idx] || 0
+            const weatherText = that._weatherCodeToText(code)
+            const waterFreq = that.calculateWaterFreq(data)
             let icon = '☀️'
-            if (weatherText.includes('rain') || weatherText.includes('雨')) icon = '🌧️'
-            else if (weatherText.includes('cloud') || weatherText.includes('云')) icon = '☁️'
-            else if (weatherText.includes('snow') || weatherText.includes('雪')) icon = '❄️'
-            else if (weatherText.includes('fog') || weatherText.includes('雾')) icon = '🌫️'
-            else if (weatherText.includes('sun') || weatherText.includes('晴')) icon = '☀️'
-            
+            if (code >= 51 && code < 70) icon = '🌧️'
+            else if (code >= 71 && code < 80) icon = '❄️'
+            else if (code >= 80 && code < 90) icon = '🌦️'
+            else if (code >= 95) icon = '⛈️'
+            else if (code >= 3) icon = '☁️'
             that.setData({
-              localWeather: `${city} ${temp}°C · ${weatherText} · 湿度${humidity}%`,
+              localWeather: `${Math.round(temp)}°C · ${weatherText} · 湿度${Math.round(humidity)}%`,
               weatherIcon: icon,
-              recommendedWaterFreq: waterFreq
+              recommendedWaterFreq: waterFreq,
+              cityName: cityName || ''
             })
-          },
-          fail() {
-            that.setData({ 
-              localWeather: '天气获取失败',
-              recommendedWaterFreq: '5-6天/次'
-            })
+          } catch (e) {
+            that.setData({ localWeather: '天气获取失败', recommendedWaterFreq: '5-6天/次', cityName: '' })
           }
         })
       },
       fail() {
-        // 如果获取位置失败，使用IP定位
-        wx.request({
-          url: 'https://wttr.in/?format=j1',
-          success(res) {
-            const w = (res.data || {}).current_condition || []
-            const current = w[0] || {}
-            const temp = Array.isArray(current.temp_C) ? current.temp_C[0] : (current.temp_C || '--')
-            const weather = Array.isArray(current.weatherDesc) ? (current.weatherDesc[0] || {}).value : (current.weatherDesc || '--')
-            const weatherText = Array.isArray(weather) ? weather[0] : weather
-            const waterFreq = that.calculateWaterFreq(res.data || {})
-            that.setData({
-              localWeather: `${temp}°C · ${weatherText}`,
-              recommendedWaterFreq: waterFreq
-            })
-          },
-          fail() {
-            that.setData({ localWeather: '天气获取失败' })
-          }
-        })
+        that.setData({ localWeather: '天气获取失败', recommendedWaterFreq: '5-6天/次', cityName: '' })
+      }
+    })
+  },
+
+  _weatherCodeToText(code) {
+    const map = {
+      0: '晴', 1: '晴间多云', 2: '多云', 3: '阴',
+      45: '雾', 48: '冻雾',
+      51: '小毛毛雨', 53: '毛毛雨', 55: '大毛毛雨',
+      61: '小雨', 63: '中雨', 65: '大雨',
+      71: '小雪', 73: '中雪', 75: '大雪',
+      77: '雪粒',
+      80: '小阵雨', 81: '中阵雨', 82: '大阵雨',
+      85: '小阵雪', 86: '大阵雪',
+      95: '雷阵雨', 96: '雷暴冰雹', 99: '雷暴大冰雹'
+    }
+    return map[code] || '未知'
+  },
+
+  // 点击植物总数弹出所有植物名字列表
+  showAllPlants() {
+    const plants = this.data.plants || []
+    if (plants.length === 0) {
+      wx.showToast({ title: '还没有植物', icon: 'none' })
+      return
+    }
+    const names = plants.map((p, i) => `${i + 1}. ${p.name}`).join('\n')
+    wx.showModal({
+      title: `🌿 我的植物们（${plants.length}株）`,
+      content: names,
+      showCancel: false,
+      confirmText: '好的'
+    })
+  },
+
+  showNeedsWater() {
+    const plants = this.data.plants || []
+    const needs = plants.filter(p => p.needWater)
+    if (needs.length === 0) {
+      wx.showToast({ title: '太棒了！没有需要浇水的植物 🎉', icon: 'none' })
+      return
+    }
+    const names = needs.map((p, i) => `${i + 1}. ${p.name}`).join('\n')
+    wx.showModal({
+      title: `💧 待浇水（${needs.length}株）`,
+      content: names,
+      showCancel: false,
+      confirmText: '好的'
+    })
+  },
+
+  scrollToTop() {
+    wx.pageScrollTo({ scrollTop: 0, duration: 300 })
+  },
+
+  scrollToPlant(e) {
+    const index = e.currentTarget.dataset.index
+    wx.createSelectorQuery().select('#plant-' + index).boundingClientRect(res => {
+      if (res) {
+        wx.pageScrollTo({ scrollTop: res.top, duration: 300 })
+      }
+    }).exec()
+  },
+
+  showNeedsFertilizer() {
+    const plants = this.data.plants || []
+    const needs = plants.filter(p => p.needFertilizer)
+    if (needs.length === 0) {
+      wx.showToast({ title: '太棒了！没有需要施肥的植物 🎉', icon: 'none' })
+      return
+    }
+    const names = needs.map((p, i) => `${i + 1}. ${p.name}`).join('\n')
+    wx.showModal({
+      title: `🌱 待施肥（${needs.length}株）`,
+      content: names,
+      showCancel: false,
+      confirmText: '好的'
+    })
+  },
+
+
+
+  editLastWater(e) {
+    const { index, id } = e.currentTarget.dataset
+    const plants = this.data.plants
+    if (!plants || index >= plants.length) return
+    const current = plants[index]
+    // date picker 返回格式：YYYY-MM-DD
+    const newDate = e.detail.value
+    const date = new Date(newDate)
+    const nextWaterDate = new Date(date.getTime() + (current.waterInterval || 7) * 24 * 60 * 60 * 1000)
+    wx.showLoading({ title: '更新中...' })
+    wx.cloud.callFunction({
+      name: 'updatePlant',
+      data: {
+        recordId: id,
+        data: {
+          '浇水时间': date,
+          '下次浇水时间': nextWaterDate
+        }
+      },
+      success: () => {
+        wx.hideLoading()
+        wx.showToast({ title: '已更新' })
+        this.loadPlants()
+      },
+      fail: (err) => {
+        wx.hideLoading()
+        wx.showToast({ title: '更新失败', icon: 'none' })
+        console.error('更新上次浇水失败:', err)
       }
     })
   },
@@ -234,10 +305,18 @@ Page({
   loadPlants() {
     this.setData({ loading: true, error: '' })
     
-    clouddb.getPlants().then(plants => {
-      if (plants.length === 0) {
-        plants = this.getMockData()
+    clouddb.getPlants().then(rawPlants => {
+      if (rawPlants.length === 0) {
+        const plants = this.getMockData()
+        this.setData({
+          plants,
+          needWaterCount: plants.filter(p => p.needWater).length,
+          needFertilizerCount: plants.filter(p => p.needFertilizer).length,
+          loading: false
+        })
+        return
       }
+      const plants = this.processRecords(rawPlants)
       this.setData({
         plants,
         needWaterCount: plants.filter(p => p.needWater).length,
@@ -254,6 +333,16 @@ Page({
   },
 
   processRecords(records) {
+    const cardColors = [
+      'rgba(232,245,233,0.6)', // 浅绿
+      'rgba(255,243,224,0.6)', // 浅橙
+      'rgba(227,242,253,0.6)', // 浅蓝
+      'rgba(255,235,238,0.6)', // 浅粉
+      'rgba(243,229,245,0.6)', // 浅紫
+      'rgba(225,245,254,0.6)', // 浅青
+      'rgba(255,248,225,0.6)', // 浅黄
+      'rgba(232,234,246,0.6)', // 浅靛
+    ]
     if (!records || records.length === 0) return []
 
     const now = Date.now()
@@ -290,6 +379,8 @@ Page({
 
       const waterInterval = f['waterInterval'] || 7
 
+      const colorIdx = (r._id || '').length > 0 ? (r._id.charCodeAt(0) + (r._id.charCodeAt(1) || 0)) % cardColors.length : 0
+
       return {
         recordId: r._id || r.recordId || '',
         name,
@@ -301,11 +392,21 @@ Page({
         humidity,
         toxicityLevel,
         toxicitySource,
+        scientificName: f['scientificName'] || '',
+        family: f['family'] || '',
+        origin: f['origin'] || '',
+        growthSeason: f['growthSeason'] || '',
+        heatResist: f['heatResist'] || '',
+        coldResist: f['coldResist'] || '',
+        soil: f['soil'] || '',
         lastWaterTime: this.formatDate(lastWaterTime),
+        lastWaterDate: lastWaterTime instanceof Date ? lastWaterTime.toISOString().slice(0, 10) : new Date(lastWaterTime).toISOString().slice(0, 10),
         nextWaterTime: this.formatDate(nextWaterTime),
+        lastFertilizerTime: this.formatDate(parseDate(f['施肥时间']) || new Date(now - 30 * 24 * 60 * 60 * 1000)),
         nextFertilizerTime: this.formatDate(nextFertilizerTime),
         needWater,
-        needFertilizer
+        needFertilizer,
+        cardColor: cardColors[colorIdx]
       }
     })
   },
@@ -319,6 +420,12 @@ Page({
   goToAdd() {
     wx.navigateTo({
       url: '/pages/add/add'
+    })
+  },
+
+  goToInit() {
+    wx.navigateTo({
+      url: '/pages/init/init'
     })
   },
 
@@ -351,7 +458,7 @@ Page({
   updateWaterTime(recordId, name) {
     wx.showLoading({ title: '更新中...' })
     const that = this
-    const plant = (this.data.plants || []).find(p => p.id === recordId)
+    const plant = (this.data.plants || []).find(p => p.recordId === recordId)
     const baseDays = plant ? (plant.waterInterval || 7) : 7
 
     // 先获取天气，再计算动态间隔
@@ -359,34 +466,14 @@ Page({
       type: 'wgs84',
       success(loc) {
         wx.request({
-          url: `https://wttr.in/${loc.latitude},${loc.longitude}?format=j1`,
+          url: `https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&hourly=temperature_2m,relative_humidity_2m,precipitation&forecast_days=3&timezone=Asia/Shanghai`,
           success(weatherRes) {
             let days = baseDays
             try {
-              const forecast = (weatherRes.data || {}).weather || []
-              let totalRain = 0, avgTemp = 0, avgHumidity = 0, d = 0
-              for (let i = 0; i < Math.min(3, forecast.length); i++) {
-                const day = forecast[i]
-                if (day.hourly) {
-                  for (let h = 0; h < day.hourly.length; h++) {
-                    const hour = day.hourly[h]
-                    totalRain += parseFloat(hour.precipMM || '0')
-                    avgTemp += parseFloat(hour.temp_C || '20')
-                    avgHumidity += parseInt(hour.humidity || '50')
-                    d++
-                  }
-                }
-              }
-              if (d > 0) { avgTemp /= d; avgHumidity /= d }
-              // 根据天气微调间隔
-              if (avgTemp > 30) days -= 2
-              else if (avgTemp > 25) days -= 1
-              else if (avgTemp < 10) days += 2
-              if (avgHumidity > 80) days += 1
-              else if (avgHumidity < 30) days -= 1
-              if (totalRain > 10) days += 1
-              if (totalRain > 30) days += 1
-              days = Math.max(1, Math.min(15, days))
+              const data = weatherRes.data || {}
+              const waterFreq = that.calculateWaterFreq(data)
+              const match = waterFreq.match(/(\d+)/)
+              days = match ? parseInt(match[1]) : baseDays
             } catch (e) { days = baseDays }
             that._doUpdateWater(recordId, name, days)
           },
@@ -399,18 +486,19 @@ Page({
 
   _doUpdateWater(recordId, name, days) {
     const nextWaterTime = Date.now() + days * 24 * 60 * 60 * 1000
-    clouddb.updatePlant(recordId, {
-      '浇水时间': new Date(),
-      '下次浇水时间': new Date(nextWaterTime),
-      waterInterval: days
-    }).then(() => {
-      wx.hideLoading()
-      wx.showToast({ title: `💧 ${name} 浇水成功！` })
-      this.loadPlants()
-    }).catch(err => {
-      wx.hideLoading()
-      wx.showToast({ title: '更新失败', icon: 'none' })
-      console.error('更新失败:', err)
+    wx.cloud.callFunction({
+      name: 'updatePlant',
+      data: { recordId, data: { '浇水时间': new Date(), '下次浇水时间': new Date(nextWaterTime), waterInterval: days } },
+      success: () => {
+        wx.hideLoading()
+        wx.showToast({ title: `💧 ${name} 浇水成功！` })
+        this.loadPlants()
+      },
+      fail: (err) => {
+        wx.hideLoading()
+        wx.showToast({ title: '更新失败', icon: 'none' })
+        console.error('更新失败:', err)
+      }
     })
   },
 
@@ -422,26 +510,17 @@ Page({
       type: 'wgs84',
       success(loc) {
         wx.request({
-          url: `https://wttr.in/${loc.latitude},${loc.longitude}?format=j1`,
+          url: `https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&hourly=temperature_2m&forecast_days=3&timezone=Asia/Shanghai`,
           success(weatherRes) {
-            let days = 14 // 默认2周
+            let days = 14
             try {
-              const forecast = (weatherRes.data || {}).weather || []
-              let avgTemp = 0, d = 0
-              for (let i = 0; i < Math.min(3, forecast.length); i++) {
-                const day = forecast[i]
-                if (day.hourly) {
-                  for (let h = 0; h < day.hourly.length; h++) {
-                    avgTemp += parseFloat(day.hourly[h].temp_C || '20')
-                    d++
-                  }
-                }
+              const temps = (weatherRes.data || {}).hourly || {}
+              const t = temps.temperature_2m || []
+              if (t.length > 0) {
+                const avgTemp = t.slice(0, 72).reduce((a, b) => a + b, 0) / Math.min(72, t.length)
+                if (avgTemp > 25) days = 10
+                else if (avgTemp < 10) days = 30
               }
-              if (d > 0) avgTemp /= d
-              // 生长期（温暖）施肥更频繁
-              if (avgTemp > 25) days = 10
-              else if (avgTemp < 10) days = 30
-              else days = 14
             } catch (e) {}
             that._doUpdateFertilizer(recordId, name, days)
           },
@@ -454,16 +533,19 @@ Page({
 
   _doUpdateFertilizer(recordId, name, days) {
     const nextFertilizerTime = Date.now() + days * 24 * 60 * 60 * 1000
-    clouddb.updatePlant(recordId, {
-      '下次施肥时间': new Date(nextFertilizerTime)
-    }).then(() => {
-      wx.hideLoading()
-      wx.showToast({ title: `🌱 ${name} 施肥成功！` })
-      this.loadPlants()
-    }).catch(err => {
-      wx.hideLoading()
-      wx.showToast({ title: '更新失败', icon: 'none' })
-      console.error('施肥更新失败:', err)
+    wx.cloud.callFunction({
+      name: 'updatePlant',
+      data: { recordId, data: { '下次施肥时间': new Date(nextFertilizerTime) } },
+      success: () => {
+        wx.hideLoading()
+        wx.showToast({ title: `🌱 ${name} 施肥成功！` })
+        this.loadPlants()
+      },
+      fail: (err) => {
+        wx.hideLoading()
+        wx.showToast({ title: '更新失败', icon: 'none' })
+        console.error('施肥更新失败:', err)
+      }
     })
   },
 
@@ -489,47 +571,9 @@ Page({
     ]
   },
 
-  // 触摸开始
-  touchStart(e) {
-    this.setData({ startX: e.touches[0].clientX })
-  },
 
-  // 触摸移动
-  touchMove(e) {
-    const currentX = e.touches[0].clientX
-    const diff = this.data.startX - currentX
-    const index = e.currentTarget.dataset.index
-    
-    if (diff > 50) {
-      // 向左滑动，显示删除按钮
-      const plants = this.data.plants
-      plants[index].isSwiping = true
-      this.setData({ plants })
-    } else if (diff < -50) {
-      // 向右滑动，隐藏删除按钮
-      const plants = this.data.plants
-      plants[index].isSwiping = false
-      this.setData({ plants })
-    }
-  },
 
-  // 滚动到待浇水植物
-  scrollToWater() {
-    const idx = this.data.plants.findIndex(p => p.needWater)
-    if (idx >= 0) {
-      this.setData({ scrollIntoView: 'plant-' + idx })
-      setTimeout(() => this.setData({ scrollIntoView: '' }), 500)
-    }
-  },
 
-  // 滚动到待施肥植物
-  scrollToFertilizer() {
-    const idx = this.data.plants.findIndex(p => p.needFertilizer)
-    if (idx >= 0) {
-      this.setData({ scrollIntoView: 'plant-' + idx })
-      setTimeout(() => this.setData({ scrollIntoView: '' }), 500)
-    }
-  },
 
   // 删除植物
   deletePlant(e) {
@@ -569,8 +613,8 @@ Page({
             needFertilizerCount: plants.filter(p => p.needFertilizer).length,
           })
         } else {
-          wx.showToast({ title: '删除失败: ' + (res.result ? res.result.error : '未知'), icon: 'none' })
-          console.error('删除失败:', res)
+          wx.showToast({ title: '删除失败: ' + (res.result ? JSON.stringify(res.result) : '未知'), icon: 'none', duration: 3000 })
+          console.error('删除失败 full result:', JSON.stringify(res.result))
         }
       },
       fail: (err) => {
@@ -579,9 +623,5 @@ Page({
         console.error('删除失败:', err)
       }
     })
-  }
-  goToTest() {
-    wx.navigateTo({ url: "/pages/test/test" })
   },
-
 })

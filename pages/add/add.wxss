@@ -1,9 +1,11 @@
 page {
+  width: 100%;
+  overflow-x: hidden;
   background: linear-gradient(135deg, #F5F0F0 0%, #E8E4E8 50%, #E0E4E0 100%);
   min-height: 100vh;
 }
 
-.container { padding: 30rpx; }
+.container { padding: 30rpx; max-width: 100%; box-sizing: border-box; overflow-x: hidden; }
 
 .title {
   font-size: 36rpx;

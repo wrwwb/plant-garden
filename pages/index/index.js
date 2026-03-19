@@ -348,11 +348,59 @@ Page({
 
   updateWaterTime(recordId, name) {
     wx.showLoading({ title: '更新中...' })
-    const nextWaterTime = Date.now() + 7 * 24 * 60 * 60 * 1000
-    
+    const that = this
+    const plant = (this.data.plants || []).find(p => p.id === recordId)
+    const baseDays = plant ? (plant.waterInterval || 7) : 7
+
+    // 先获取天气，再计算动态间隔
+    wx.getLocation({
+      type: 'wgs84',
+      success(loc) {
+        wx.request({
+          url: `https://wttr.in/${loc.latitude},${loc.longitude}?format=j1`,
+          success(weatherRes) {
+            let days = baseDays
+            try {
+              const forecast = (weatherRes.data || {}).weather || []
+              let totalRain = 0, avgTemp = 0, avgHumidity = 0, d = 0
+              for (let i = 0; i < Math.min(3, forecast.length); i++) {
+                const day = forecast[i]
+                if (day.hourly) {
+                  for (let h = 0; h < day.hourly.length; h++) {
+                    const hour = day.hourly[h]
+                    totalRain += parseFloat(hour.precipMM || '0')
+                    avgTemp += parseFloat(hour.temp_C || '20')
+                    avgHumidity += parseInt(hour.humidity || '50')
+                    d++
+                  }
+                }
+              }
+              if (d > 0) { avgTemp /= d; avgHumidity /= d }
+              // 根据天气微调间隔
+              if (avgTemp > 30) days -= 2
+              else if (avgTemp > 25) days -= 1
+              else if (avgTemp < 10) days += 2
+              if (avgHumidity > 80) days += 1
+              else if (avgHumidity < 30) days -= 1
+              if (totalRain > 10) days += 1
+              if (totalRain > 30) days += 1
+              days = Math.max(1, Math.min(15, days))
+            } catch (e) { days = baseDays }
+            that._doUpdateWater(recordId, name, days)
+          },
+          fail() { that._doUpdateWater(recordId, name, baseDays) }
+        })
+      },
+      fail() { that._doUpdateWater(recordId, name, baseDays) }
+    })
+  },
+
+  _doUpdateWater(recordId, name, days) {
+    const nextWaterTime = Date.now() + days * 24 * 60 * 60 * 1000
     clouddb.updatePlant(recordId, {
       '浇水时间': new Date(),
-      '下次浇水时间': new Date(nextWaterTime)
+      '下次浇水时间': new Date(nextWaterTime),
+      waterInterval: days
     }).then(() => {
       wx.hideLoading()
       wx.showToast({ title: `💧 ${name} 浇水成功！` })
@@ -360,13 +408,50 @@ Page({
     }).catch(err => {
       wx.hideLoading()
       wx.showToast({ title: '更新失败', icon: 'none' })
+      console.error('更新失败:', err)
     })
   },
 
   updateFertilizerTime(recordId, name) {
     wx.showLoading({ title: '更新中...' })
-    const nextFertilizerTime = Date.now() + 30 * 24 * 60 * 60 * 1000
-    
+    const that = this
+    // 施肥周期也根据天气微调
+    wx.getLocation({
+      type: 'wgs84',
+      success(loc) {
+        wx.request({
+          url: `https://wttr.in/${loc.latitude},${loc.longitude}?format=j1`,
+          success(weatherRes) {
+            let days = 14 // 默认2周
+            try {
+              const forecast = (weatherRes.data || {}).weather || []
+              let avgTemp = 0, d = 0
+              for (let i = 0; i < Math.min(3, forecast.length); i++) {
+                const day = forecast[i]
+                if (day.hourly) {
+                  for (let h = 0; h < day.hourly.length; h++) {
+                    avgTemp += parseFloat(day.hourly[h].temp_C || '20')
+                    d++
+                  }
+                }
+              }
+              if (d > 0) avgTemp /= d
+              // 生长期（温暖）施肥更频繁
+              if (avgTemp > 25) days = 10
+              else if (avgTemp < 10) days = 30
+              else days = 14
+            } catch (e) {}
+            that._doUpdateFertilizer(recordId, name, days)
+          },
+          fail() { that._doUpdateFertilizer(recordId, name, 14) }
+        })
+      },
+      fail() { that._doUpdateFertilizer(recordId, name, 14) }
+    })
+  },
+
+  _doUpdateFertilizer(recordId, name, days) {
+    const nextFertilizerTime = Date.now() + days * 24 * 60 * 60 * 1000
     clouddb.updatePlant(recordId, {
       '下次施肥时间': new Date(nextFertilizerTime)
     }).then(() => {
@@ -376,6 +461,7 @@ Page({
     }).catch(err => {
       wx.hideLoading()
       wx.showToast({ title: '更新失败', icon: 'none' })
+      console.error('施肥更新失败:', err)
     })
   },
 

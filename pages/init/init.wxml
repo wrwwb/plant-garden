@@ -1,23 +1,22 @@
+<!--pages/init/init.wxml-->
 <view class="container">
-  <view class="title">🔧 数据初始化</view>
+  <view class="header">
+    <text class="title">🌱 上传我的植物</text>
+  </view>
   
-  <view class="desc">第一次使用需要初始化数据，请按顺序点击以下按钮：</view>
-
-  <view class="section">
-    <view class="section-title">第一步：上传我的植物（7株）</view>
-    <button type="primary" bindtap="uploadMyPlants">🌱 上传我的植物</button>
+  <view class="description">
+    <text>点击下方按钮，将植物数据批量上传到云数据库</text>
   </view>
 
-  <view class="section">
-    <view class="section-title">第二步：查询确认</view>
-    <button bindtap="checkMyPlants">🔍 查询我的植物</button>
+  <button class="upload-btn" bindtap="uploadMyPlants">🌱 上传我的植物</button>
+  
+  <view class="description">
+    <text>或点击下方按钮直接从云函数上传</text>
   </view>
 
-  <view class="log-container">
-    <view class="log-title">日志：</view>
-    <view wx:for="{{logs}}" wx:key="index" class="log-item">{{item}}</view>
-  </view>
+  <button class="cloud-upload-btn" bindtap="cloudUpload">☁️ 云函数批量上传</button>
 
-  <view class="tip">初始化完成后可删除此页面</view>
-  <button bindtap="goHome">返回首页</button>
+  <view id="upload-log" class="log-area">
+    <!-- 上传日志 -->
+  </view>
 </view>

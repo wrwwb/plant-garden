@@ -79,3 +79,25 @@ Page({
     }
   }
 })
+
+// 云函数批量上传（不需要人工触发上传按钮）
+cloudUpload() {
+  this.appendLog('☁️ 正在通过云函数上传...')
+  wx.cloud.callFunction({
+    name: 'addPlants',
+    success: (res) => {
+      this.appendLog('✅ 上传结果: ' + JSON.stringify(res.result))
+    },
+    fail: (err) => {
+      this.appendLog('❌ 上传失败: ' + JSON.stringify(err))
+    }
+  })
+},
+
+appendLog(text) {
+  const log = this.data.uploadLog || ''
+  const now = new Date()
+  const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ':' + now.getSeconds().toString().padStart(2,'0')
+  this.setData({ uploadLog: log + '\n[' + time + '] ' + text })
+  console.log(text)
+}

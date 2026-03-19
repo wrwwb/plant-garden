@@ -471,7 +471,13 @@ Page({
         wx.hideLoading()
         if (res.result && res.result.success) {
           wx.showToast({ title: '已删除' })
-          this.loadPlants()
+          // 从本地数据直接移除，不用重新读数据库
+          const plants = this.data.plants.filter(p => p.recordId !== recordId)
+          this.setData({
+            plants,
+            needWaterCount: plants.filter(p => p.needWater).length,
+            needFertilizerCount: plants.filter(p => p.needFertilizer).length,
+          })
         } else {
           wx.showToast({ title: '删除失败', icon: 'none' })
         }

@@ -50,6 +50,7 @@
   "libVersion": "2.19.4",
   "cloudbaseTemplateRoot": "cloudbaserc",
   "cloudbasePluginRoot": "cloudbase",
+  "cloudfunctionRoot": "cloudfunctions/",
   "appid": "wxc89c002a780367c5",
   "projectname": "plant-garden-mini",
   "condition": {},

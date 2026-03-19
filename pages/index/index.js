@@ -551,12 +551,14 @@ Page({
 
   doDeletePlant(recordId, name) {
     wx.showLoading({ title: '删除中...' })
+    console.log('删除植物:', recordId, name)
     
     wx.cloud.callFunction({
       name: 'deletePlant',
       data: { recordId },
       success: (res) => {
         wx.hideLoading()
+        console.log('删除结果:', JSON.stringify(res))
         if (res.result && res.result.success) {
           wx.showToast({ title: '已删除' })
           // 从本地数据直接移除，不用重新读数据库
@@ -567,7 +569,8 @@ Page({
             needFertilizerCount: plants.filter(p => p.needFertilizer).length,
           })
         } else {
-          wx.showToast({ title: '删除失败', icon: 'none' })
+          wx.showToast({ title: '删除失败: ' + (res.result ? res.result.error : '未知'), icon: 'none' })
+          console.error('删除失败:', res)
         }
       },
       fail: (err) => {

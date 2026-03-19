@@ -21,29 +21,45 @@ function parseDate(str) {
 Page({
   data: {
     status: '准备就绪',
-    logs: []
+    logs: [],
+    uploading: false
   },
 
   onLoad() {
     this.log('初始化开始...')
+    // 延迟自动触发云函数批量上传
+    this.setData({ uploading: true })
+    setTimeout(() => {
+      this.log('正在通过云函数上传植物数据...')
+      wx.cloud.callFunction({
+        name: 'addPlants',
+        success: (res) => {
+          this.setData({ uploading: false })
+          this.log('✅ 上传成功! 结果: ' + JSON.stringify(res.result))
+          wx.showToast({ title: '上传成功', icon: 'success' })
+        },
+        fail: (err) => {
+          this.setData({ uploading: false })
+          this.log('❌ 上传失败: ' + JSON.stringify(err))
+          wx.showToast({ title: '上传失败', icon: 'none' })
+        }
+      })
+    }, 1000)
   },
 
   log(msg) {
-    const logs = this.data.logs
-    logs.push(msg)
-    this.setData({ logs })
+    const logs = this.data.logs || []
+    logs.push('[' + new Date().toLocaleTimeString() + '] ' + msg)
+    this.setData({ logs, status: msg })
     console.log(msg)
   },
 
-  // 上传我的植物（本地上传）
-  uploadMyPlants() {
-    const self = this
-    this.log('开始上传植物数据...')
-
-    myPlants.forEach(async (p, i) => {
+  // 上传我的植物（逐条上传）
+  async uploadMyPlants() {
+    this.log('开始上传我的植物...')
+    for (let i = 0; i < myPlants.length; i++) {
+      const p = myPlants[i]
       try {
-        const now = Date.now()
-        const waterMs = (p.waterInterval || 7) * 24 * 60 * 60 * 1000
         const plant = {
           name: p.name,
           location: p.location,
@@ -55,31 +71,45 @@ Page({
           toxicityLevel: p.toxicityLevel,
           toxicitySource: p.toxicitySource,
           waterInterval: p.waterInterval,
-          '浇水时间': new Date(now),
+          '浇水时间': new Date(),
           '下次浇水时间': parseDate(p.nextWater),
           '下次施肥时间': parseDate(p.nextFertilizer)
         }
         await clouddb.addPlant(plant)
-        self.log(`✅ ${p.name} 上传成功`)
+        this.log('✓ ' + p.name + ' 上传成功')
       } catch (e) {
-        self.log(`❌ ${p.name} 失败: ${e.errMsg || e.message}`)
+        this.log('✗ ' + p.name + ' 失败: ' + (e.message || e.errMsg))
       }
-    })
+      await new Promise(r => setTimeout(r, 500))
+    }
+    this.log('我的植物上传完成！')
   },
 
   // 云函数批量上传
   cloudUpload() {
-    this.log('☁️ 正在通过云函数上传...')
+    this.log('☁️ 正在通过云函数批量上传...')
     wx.cloud.callFunction({
       name: 'addPlants',
       success: (res) => {
-        this.log('✅ 上传完成: ' + JSON.stringify(res.result))
-        wx.showToast({ title: '上传成功', icon: 'success' })
+        this.log('✅ 上传结果: ' + JSON.stringify(res.result))
       },
       fail: (err) => {
         this.log('❌ 上传失败: ' + JSON.stringify(err))
-        wx.showToast({ title: '上传失败', icon: 'none' })
       }
     })
+  },
+
+  // 查询我的植物
+  async checkMyPlants() {
+    this.log('查询中...')
+    try {
+      const plants = await clouddb.getPlants()
+      this.log('共 ' + plants.length + ' 株植物')
+      plants.forEach(p => {
+        this.log('- ' + p.name + ' (' + p.toxicityLevel + ')')
+      })
+    } catch (e) {
+      this.log('查询失败: ' + (e.message || e.errMsg))
+    }
   }
 })

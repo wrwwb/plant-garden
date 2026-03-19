@@ -3,7 +3,8 @@
     "pages/index/index",
     "pages/add/add",
     "pages/init/init",
-    "pages/init-ref/init-ref"
+    "pages/init-ref/init-ref",
+    "pages/test/test"
   ],
   "cloud": true,
   "window": {

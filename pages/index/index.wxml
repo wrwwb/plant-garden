@@ -93,3 +93,5 @@
     </view>
   </scroll-view>
 </view>
+<!-- 临时测试按钮 -->
+<button class="test-link" bindtap="goToTest">🧪 测试增删</button>

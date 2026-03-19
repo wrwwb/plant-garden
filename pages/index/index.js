@@ -580,4 +580,8 @@ Page({
       }
     })
   }
+  goToTest() {
+    wx.navigateTo({ url: "/pages/test/test" })
+  },
+
 })

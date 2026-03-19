@@ -1,0 +1,7 @@
+<view class="container">
+  <text class="title">🧪 CRUD 测试</text>
+  <button bindtap="runTest" class="test-btn">运行测试</button>
+  <view class="log-area">
+    <text>{{logs}}</text>
+  </view>
+</view>

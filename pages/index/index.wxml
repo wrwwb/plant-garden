@@ -58,21 +58,13 @@
       <view class="plant-header">
         <view class="plant-title">
           <text class="plant-name">{{item.name}}</text>
-          <text wx:if="{{item.toxicityLevel === '轻微刺激'}}" class="plant-poison toxic-light">⚠️ {{item.toxicityLevel}}</text>
-          <text wx:elif="{{item.toxicityLevel === '中度刺激'}}" class="plant-poison toxic-medium">⚠️ {{item.toxicityLevel}}</text>
-          <text wx:elif="{{item.toxicityLevel === '强烈刺激'}}" class="plant-poison toxic-strong">⚠️ {{item.toxicityLevel}}</text>
-          <text wx:elif="{{item.toxicityLevel !== '无刺激'}}" class="plant-poison">⚠️ {{item.toxicityLevel}}</text>
+          <text wx:if="{{item.toxicityLevel !== '无刺激' && item.toxicityLevel !== '无刺激'}}" class="plant-poison toxic-light">⚠️ {{item.toxicityLevel}}</text>
         </view>
         <view class="plant-location">📍 {{item.location}}</view>
       </view>
       
       <view class="plant-info">
-        <view class="info-line">💧 浇水频率: {{item.waterFrequency}}</view>
-        <view class="info-line">🌱 施肥: {{item.fertilizer}}</view>
-        <view class="info-line">☀️ 光照: {{item.light}}</view>
-        <view class="info-line">🌡️ 温度: {{item.temperature}}</view>
-        <view class="info-line">💨 湿度: {{item.humidity}}</view>
-        <view wx:if="{{item.toxicityLevel !== '无刺激'}}" class="info-line toxic-info">⚠️ {{item.toxicityLevel}}：{{item.toxicitySource}}</view>
+        <view class="info-line">💧 {{item.waterFrequency}}</view>
       </view>
 
       <view class="time-section">

@@ -255,42 +255,50 @@ Page({
 
   processRecords(records) {
     if (!records || records.length === 0) return []
-    
+
     const now = Date.now()
     const today = new Date(now)
 
     return records.map(r => {
       const f = r.fields || r
-      const lastWaterTime = f['浇水时间'] ? new Date(f['浇水时间']) : new Date(now - 7 * 24 * 60 * 60 * 1000)
-      const nextWaterTime = f['下次浇水时间'] ? new Date(f['下次浇水时间']) : new Date(now + 7 * 24 * 60 * 60 * 1000)
-      const nextFertilizerTime = f['下次施肥时间'] ? new Date(f['下次施肥时间']) : new Date(now + 30 * 24 * 60 * 60 * 1000)
-      
+
+      // 兼容中英文字段名
+      const name = f['name'] || f['花名'] || '-'
+      const location = f['location'] || f['推荐摆放位置'] || '-'
+      const waterFrequency = f['waterFrequency'] || f['浇水频率'] || '-'
+      const light = f['light'] || f['光照要求'] || '-'
+      const temperature = f['temperature'] || f['温度要求'] || '-'
+      const fertilizer = f['fertilizer'] || f['施肥'] || '-'
+      const humidity = f['humidity'] || f['湿度/特殊注意事项'] || '-'
+      const toxicityLevel = f['toxicityLevel'] || f['毒性安全等级'] || '无刺激'
+      const toxicitySource = f['toxicitySource'] || f['备注'] || ''
+
+      // 日期字段（云数据库返回的可能是字符串或时间戳）
+      const parseDate = (val) => {
+        if (!val) return null
+        if (val instanceof Date) return val
+        const d = new Date(val)
+        return isNaN(d.getTime()) ? null : d
+      }
+
+      const lastWaterTime = parseDate(f['浇水时间']) || new Date(now - 7 * 24 * 60 * 60 * 1000)
+      const nextWaterTime = parseDate(f['下次浇水时间']) || new Date(now + 7 * 24 * 60 * 60 * 1000)
+      const nextFertilizerTime = parseDate(f['下次施肥时间']) || new Date(now + 30 * 24 * 60 * 60 * 1000)
+
       const needWater = nextWaterTime <= today
       const needFertilizer = nextFertilizerTime <= today
 
-      const getText = (val) => {
-        if (val === null || val === undefined) return '-'
-        if (typeof val === 'string') return val
-        if (typeof val === 'number') return String(val)
-        if (Array.isArray(val) && val.length > 0) {
-          const first = val[0]
-          if (first && typeof first === 'object' && first.text) return first.text
-          if (typeof first === 'string') return first
-        }
-        return '-'
-      }
-
       return {
         recordId: r._id || r.recordId || '',
-        name: getText(f['花名']),
-        location: getText(f['推荐摆放位置']),
-        waterFrequency: getText(f['浇水频率']),
-        fertilizer: getText(f['施肥']),
-        light: getText(f['光照要求']),
-        temperature: getText(f['温度要求']),
-        humidity: getText(f['湿度/特殊注意事项']),
-        toxicityLevel: getText(f['毒性安全等级']) || '无刺激',
-        toxicitySource: getText(f['备注']) || '',
+        name,
+        location,
+        waterFrequency,
+        fertilizer,
+        light,
+        temperature,
+        humidity,
+        toxicityLevel,
+        toxicitySource,
         lastWaterTime: this.formatDate(lastWaterTime),
         nextWaterTime: this.formatDate(nextWaterTime),
         nextFertilizerTime: this.formatDate(nextFertilizerTime),

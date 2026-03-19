@@ -217,18 +217,17 @@ Page({
     const now = Date.now()
 
     const plant = {
-      '花名': this.data.name,
-      '推荐摆放位置': this.data.location || '-',
-      '浇水频率': this.data.waterFreqList[this.data.waterFreqIndex],
+      name: this.data.name,
+      location: this.data.location || '-',
+      waterFrequency: this.data.waterFreqList[this.data.waterFreqIndex],
+      light: this.data.light || '-',
+      temperature: this.data.temperature || '-',
+      fertilizer: this.data.fertilizer || '-',
+      humidity: this.data.humidity || '-',
+      toxicityLevel: this.data.toxicityLevel || '无刺激',
       '浇水时间': new Date(now),
       '下次浇水时间': new Date(now + 7 * 24 * 60 * 60 * 1000),
-      '下次施肥时间': new Date(now + 30 * 24 * 60 * 60 * 1000),
-      '光照要求': this.data.light || '-',
-      '温度要求': this.data.temperature || '-',
-      '施肥': this.data.fertilizer || '-',
-      '湿度/特殊注意事项': this.data.humidity || '-',
-      '毒性安全等级': this.data.toxicityLevel || '无刺激',
-      '买入时间': new Date(now)
+      '下次施肥时间': new Date(now + 30 * 24 * 60 * 60 * 1000)
     }
 
     clouddb.addPlant(plant).then(() => {

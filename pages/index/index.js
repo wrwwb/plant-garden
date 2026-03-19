@@ -464,13 +464,23 @@ Page({
   doDeletePlant(recordId, name) {
     wx.showLoading({ title: '删除中...' })
     
-    clouddb.deletePlant(recordId).then(() => {
-      wx.hideLoading()
-      wx.showToast({ title: '已删除' })
-      this.loadPlants()
-    }).catch(err => {
-      wx.hideLoading()
-      wx.showToast({ title: '删除失败', icon: 'none' })
+    wx.cloud.callFunction({
+      name: 'deletePlant',
+      data: { recordId },
+      success: (res) => {
+        wx.hideLoading()
+        if (res.result && res.result.success) {
+          wx.showToast({ title: '已删除' })
+          this.loadPlants()
+        } else {
+          wx.showToast({ title: '删除失败', icon: 'none' })
+        }
+      },
+      fail: (err) => {
+        wx.hideLoading()
+        wx.showToast({ title: '删除失败', icon: 'none' })
+        console.error('删除失败:', err)
+      }
     })
   }
 })

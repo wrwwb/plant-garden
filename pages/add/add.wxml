@@ -19,7 +19,6 @@
         <scroll-view scroll-y class="plant-dropdown {{showDropdown ? 'show' : ''}}" style="height: {{filteredList.length > 5 ? '300rpx' : 'auto'}}">
           <view wx:for="{{filteredList}}" wx:key="index" class="plant-option {{index === selectedIndex ? 'selected' : ''}}" bindtap="onSelectPlant" data-index="{{index}}">
             {{item.name}}
-            <text wx:if="{{item.toxicityLevel && item.toxicityLevel !== '无刺激'}}" class="toxic-badge">{{item.toxicityLevel}}</text>
           </view>
         </scroll-view>
       </view>

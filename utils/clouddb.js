@@ -75,23 +75,21 @@ function getPlants() {
 // 添加植物
 function addPlant(plant) {
   return new Promise((resolve, reject) => {
-    getUserId().then(userId => {
-      const db = getDB()
-      if (!db) return reject(new Error('cloud db not available'))
-      db.collection('plants').add({
-        data: {
-          ...plant,
-          createdAt: db.serverDate(),
-          updatedAt: db.serverDate()
-          // 注意：_openid 由云数据库自动填充，不要手动传入
-        },
-        success: res => {
-          resolve(res)
-        },
-        fail: err => {
-          reject(err)
-        }
-      })
+    const db = getDB()
+    if (!db) return reject(new Error('cloud db not available'))
+    db.collection('plants').add({
+      data: {
+        ...plant,
+        createdAt: db.serverDate(),
+        updatedAt: db.serverDate()
+        // 注意：_openid 由云数据库自动填充，不要手动传入
+      },
+      success: res => {
+        resolve(res)
+      },
+      fail: err => {
+        reject(err)
+      }
     })
   })
 }

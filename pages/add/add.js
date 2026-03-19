@@ -216,17 +216,23 @@ Page({
     wx.showLoading({ title: '保存中...' })
     const now = Date.now()
 
+    const freqText = this.data.waterFreqList[this.data.waterFreqIndex]
+    // 从 "5-6天/次" 中提取数字
+    const freqMatch = freqText.match(/(\d+)/)
+    const waterInterval = freqMatch ? parseInt(freqMatch[1]) : 5
+
     const plant = {
       name: this.data.name,
       location: this.data.location || '-',
-      waterFrequency: this.data.waterFreqList[this.data.waterFreqIndex],
+      waterFrequency: freqText,
       light: this.data.light || '-',
       temperature: this.data.temperature || '-',
       fertilizer: this.data.fertilizer || '-',
       humidity: this.data.humidity || '-',
       toxicityLevel: this.data.toxicityLevel || '无刺激',
+      waterInterval: waterInterval,
       '浇水时间': new Date(now),
-      '下次浇水时间': new Date(now + 7 * 24 * 60 * 60 * 1000),
+      '下次浇水时间': new Date(now + waterInterval * 24 * 60 * 60 * 1000),
       '下次施肥时间': new Date(now + 30 * 24 * 60 * 60 * 1000)
     }
 

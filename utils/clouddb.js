@@ -57,23 +57,18 @@ function getUserId() {
 // 获取当前用户的植物列表
 function getPlants() {
   return new Promise((resolve, reject) => {
-    getUserId().then(userId => {
-      const db = getDB()
-      if (!db) return reject(new Error('cloud db not available'))
-      db.collection('plants')
-        .where({
-          _openid: userId
-        })
-        .orderBy('createdAt', 'desc')
-        .get({
-          success: res => {
-            resolve(res.data)
-          },
-          fail: err => {
-            reject(err)
-          }
-        })
-    })
+    const db = getDB()
+    if (!db) return reject(new Error('cloud db not available'))
+    db.collection('plants')
+      .orderBy('createdAt', 'desc')
+      .get({
+        success: res => {
+          resolve(res.data)
+        },
+        fail: err => {
+          reject(err)
+        }
+      })
   })
 }
 

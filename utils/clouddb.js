@@ -1,5 +1,36 @@
 // 微信云开发数据库工具
-const db = wx.cloud.database()
+
+// 确保云开发已初始化
+function ensureCloudInit() {
+  try {
+    // 尝试调用一个云API检测是否已初始化
+    wx.cloud.database()
+    return true
+  } catch (e) {
+    // 未初始化，手动初始化
+    try {
+      wx.cloud.init({
+        env: 'cloudbase-1gvp8uog633d75e8',
+        traceUser: true,
+      })
+      return true
+    } catch (e2) {
+      console.error('wx.cloud.init failed:', e2)
+      return false
+    }
+  }
+}
+
+// 获取数据库实例
+function getDB() {
+  if (!ensureCloudInit()) return null
+  try {
+    return wx.cloud.database()
+  } catch (e) {
+    console.error('getDB failed:', e)
+    return null
+  }
+}
 
 // 获取用户ID（微信UnionID或匿名ID）
 function getUserId() {
@@ -27,6 +58,8 @@ function getUserId() {
 function getPlants() {
   return new Promise((resolve, reject) => {
     getUserId().then(userId => {
+      const db = getDB()
+      if (!db) return reject(new Error('cloud db not available'))
       db.collection('plants')
         .where({
           _openid: userId
@@ -48,6 +81,8 @@ function getPlants() {
 function addPlant(plant) {
   return new Promise((resolve, reject) => {
     getUserId().then(userId => {
+      const db = getDB()
+      if (!db) return reject(new Error('cloud db not available'))
       db.collection('plants').add({
         data: {
           ...plant,
@@ -69,6 +104,8 @@ function addPlant(plant) {
 // 更新植物
 function updatePlant(id, data) {
   return new Promise((resolve, reject) => {
+    const db = getDB()
+    if (!db) return reject(new Error('cloud db not available'))
     db.collection('plants').doc(id).update({
       data: {
         ...data,
@@ -87,6 +124,8 @@ function updatePlant(id, data) {
 // 删除植物
 function deletePlant(id) {
   return new Promise((resolve, reject) => {
+    const db = getDB()
+    if (!db) return reject(new Error('cloud db not available'))
     db.collection('plants').doc(id).remove({
       success: res => {
         resolve(res)
@@ -102,6 +141,8 @@ function deletePlant(id) {
 function batchAddPlants(plants) {
   return new Promise((resolve, reject) => {
     getUserId().then(userId => {
+      const db = getDB()
+      if (!db) return reject(new Error('cloud db not available'))
       const tasks = plants.map(plant => {
         return db.collection('plants').add({
           data: {
@@ -122,6 +163,8 @@ function batchAddPlants(plants) {
 // 获取参考植物库（只读）
 function getReferencePlants() {
   return new Promise((resolve, reject) => {
+    const db = getDB()
+    if (!db) return reject(new Error('cloud db not available'))
     db.collection('reference_plants')
       .get({
         success: res => {
@@ -137,6 +180,8 @@ function getReferencePlants() {
 // 批量添加参考植物（管理员用，不带_openid）
 function batchAddReferencePlants(plants) {
   return new Promise((resolve, reject) => {
+    const db = getDB()
+    if (!db) return reject(new Error('cloud db not available'))
     const tasks = plants.map(plant => {
       return db.collection('reference_plants').add({
         data: {

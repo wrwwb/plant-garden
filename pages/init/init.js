@@ -26,15 +26,22 @@ Page({
 
   onLoad() {
     this.log('初始化开始...')
+    // 自动触发云函数批量上传
+    this.cloudUpload()
   },
 
   log(msg) {
     const logs = this.data.logs
     logs.push(`[${new Date().toLocaleTimeString()}] ${msg}`)
     this.setData({ logs, status: msg })
+    console.log(msg)
   },
 
-  // 上传我的植物
+  appendLog(text) {
+    this.log(text)
+  },
+
+  // 上传我的植物（逐条上传）
   async uploadMyPlants() {
     this.log('开始上传我的植物...')
     for (let i = 0; i < myPlants.length; i++) {
@@ -65,6 +72,20 @@ Page({
     this.log('我的植物上传完成！')
   },
 
+  // 云函数批量上传（不需要人工触发上传按钮）
+  cloudUpload() {
+    this.log('☁️ 正在通过云函数批量上传...')
+    wx.cloud.callFunction({
+      name: 'addPlants',
+      success: (res) => {
+        this.log('✅ 上传结果: ' + JSON.stringify(res.result))
+      },
+      fail: (err) => {
+        this.log('❌ 上传失败: ' + JSON.stringify(err))
+      }
+    })
+  },
+
   // 查询我的植物
   async checkMyPlants() {
     this.log('查询中...')
@@ -79,25 +100,3 @@ Page({
     }
   }
 })
-
-// 云函数批量上传（不需要人工触发上传按钮）
-cloudUpload() {
-  this.appendLog('☁️ 正在通过云函数上传...')
-  wx.cloud.callFunction({
-    name: 'addPlants',
-    success: (res) => {
-      this.appendLog('✅ 上传结果: ' + JSON.stringify(res.result))
-    },
-    fail: (err) => {
-      this.appendLog('❌ 上传失败: ' + JSON.stringify(err))
-    }
-  })
-},
-
-appendLog(text) {
-  const log = this.data.uploadLog || ''
-  const now = new Date()
-  const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ':' + now.getSeconds().toString().padStart(2,'0')
-  this.setData({ uploadLog: log + '\n[' + time + '] ' + text })
-  console.log(text)
-}

@@ -6,14 +6,21 @@ const db = cloud.database()
 
 exports.main = async (event, context) => {
   const { recordId } = event
+  console.log('deletePlant 收到 recordId:', recordId)
+  
   if (!recordId) {
     return { success: false, error: '缺少recordId' }
   }
   try {
-    // 云函数上下文自动携带了真实的openid，数据库操作用的是真实身份
+    // 先查询记录是否存在
+    const doc = await db.collection('plants').doc(recordId).get()
+    console.log('查到记录:', JSON.stringify(doc.data))
+    
     const res = await db.collection('plants').doc(recordId).remove()
+    console.log('删除结果:', JSON.stringify(res))
     return { success: true, ...res }
   } catch (e) {
+    console.error('删除异常:', e.message || e.errMsg)
     return { success: false, error: e.message || e.errMsg }
   }
 }

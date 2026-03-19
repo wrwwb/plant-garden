@@ -98,23 +98,7 @@ function deletePlant(id) {
   })
 }
 
-// 批量添加参考植物（管理员用，不带_openid）
-function batchAddReferencePlants(plants) {
-  return new Promise((resolve, reject) => {
-    const tasks = plants.map(plant => {
-      return db.collection('reference_plants').add({
-        data: {
-          ...plant,
-          createdAt: db.serverDate(),
-          updatedAt: db.serverDate()
-        }
-      })
-    })
-    Promise.all(tasks)
-      .then(res => resolve(res))
-      .catch(err => reject(err))
-  })
-}
+// 批量添加用户植物
 function batchAddPlants(plants) {
   return new Promise((resolve, reject) => {
     getUserId().then(userId => {

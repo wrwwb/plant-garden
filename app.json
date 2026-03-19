@@ -5,6 +5,7 @@
     "pages/init/init",
     "pages/init-ref/init-ref"
   ],
+  "cloud": true,
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#C8A2C8",

@@ -288,6 +288,8 @@ Page({
       const needWater = nextWaterTime <= today
       const needFertilizer = nextFertilizerTime <= today
 
+      const waterInterval = f['waterInterval'] || 7
+
       return {
         recordId: r._id || r.recordId || '',
         name,

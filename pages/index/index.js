@@ -441,7 +441,7 @@ Page({
       return `${date.getMonth() + 1}月${date.getDate()}日`
     }
 
-    // 按名字分组
+    // 按名字分组，同时整理每条记录的详情
     const groups = {}
     records.forEach(r => {
       const f = r.fields || r
@@ -488,10 +488,28 @@ Page({
       const colorIdx = (first._id || '').length > 0
         ? (first._id.charCodeAt(0) + (first._id.charCodeAt(1) || 0)) % cardColors.length : 0
 
+      // 把每条记录的详情直接存在分组里，不需要 _allRecords 再查
+      const allRecordDetails = group.map(r => {
+        const rf = r.fields || r
+        const recId = r._id || r.recordId || ''
+        const recNextW = parseDate(rf['下次浇水时间']) || new Date(now + 7 * 86400000)
+        const recNextF = parseDate(rf['下次施肥时间']) || new Date(now + 30 * 86400000)
+        return {
+          recordId: recId,
+          name: rf['name'] || rf['花名'] || name,
+          location: rf['location'] || rf['推荐摆放位置'] || '-',
+          nextWaterTime: formatDate(recNextW),
+          nextFertilizerTime: formatDate(recNextF),
+          needWater: recNextW <= today,
+          needFertilizer: recNextF <= today
+        }
+      })
+
       return {
         name: displayName,
         displayName,
         recordIds: group.map(r => r._id || r.recordId || ''),
+        allRecordDetails,
         location,
         waterFrequency,
         fertilizer,
@@ -519,44 +537,17 @@ Page({
     })
   },
 
-  // 点击分组卡片，显示该组所有记录
+  // 点击分组卡片，显示该组所有记录（直接从 allRecordDetails 取，不依赖 _allRecords）
   showGroupDetail(e) {
-    const { name, recordids } = e.currentTarget.dataset
-    const allRecords = this.data._allRecords || []
-    const now = Date.now()
-    const parseDate = (val) => {
-      if (!val) return null
-      if (val instanceof Date) return val
-      const d = new Date(val)
-      return isNaN(d.getTime()) ? null : d
-    }
-    const formatDate = (date) => {
-      if (!date || isNaN(date.getTime())) return '-'
-      return `${date.getMonth() + 1}月${date.getDate()}日`
-    }
-    const ids = Array.isArray(recordids) ? recordids : (recordids ? recordids.split(',') : [])
-    if (!ids.length) return
-    const detailRecords = allRecords
-      .filter(r => ids.includes(r._id || r.recordId || ''))
-      .map(r => {
-        const f = r.fields || r
-        const nextW = parseDate(f['下次浇水时间']) || new Date(now + 7 * 86400000)
-        const nextF = parseDate(f['下次施肥时间']) || new Date(now + 30 * 86400000)
-        return {
-          recordId: r._id || r.recordId || '',
-          name: f['name'] || f['花名'] || '-',
-          location: f['location'] || f['推荐摆放位置'] || '-',
-          nextWaterTime: formatDate(nextW),
-          nextFertilizerTime: formatDate(nextF),
-          needWater: nextW <= new Date(now),
-          needFertilizer: nextF <= new Date(now)
-        }
-      })
+    const { name } = e.currentTarget.dataset
+    const plants = this.data.plants || []
+    const plant = plants.find(p => p.displayName === name)
+    if (!plant || !plant.allRecordDetails) return
     // 重置选中状态
     const selectedRecords = {}
-    detailRecords.forEach(r => { selectedRecords[r.recordId] = false })
+    plant.allRecordDetails.forEach(r => { selectedRecords[r.recordId] = false })
     this.setData({
-      groupDetail: { name, records: detailRecords },
+      groupDetail: { name, records: plant.allRecordDetails },
       _selectedRecords: selectedRecords,
       _selectedCount: 0,
       showGroupModal: true

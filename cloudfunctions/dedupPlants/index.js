@@ -31,11 +31,11 @@ exports.main = async (event, context) => {
       return { success: true, message: '无需去重', total: allRecords.length }
     }
 
-    // 按花名分组
+    // 按花名分组（兼容 name 和 花名 两个字段）
     const groups = {}
     allRecords.forEach(r => {
       const f = r.fields || r
-      const name = f['花名'] || f['name'] || '-'
+      const name = f['name'] || f['花名'] || '-'
       if (!groups[name]) groups[name] = []
       groups[name].push(r)
     })

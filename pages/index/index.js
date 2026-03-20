@@ -548,6 +548,10 @@ Page({
     this.setData({ groupDetail: { name, records: detailRecords, recordIdsStr: ids.join(','), _selectedCount: 0 }, showGroupModal: true })
   },
 
+  preventBubble() {
+    // 空函数，阻止事件穿透到遮罩层
+  },
+
   closeGroupModal() {
     this.setData({ showGroupModal: false })
   },

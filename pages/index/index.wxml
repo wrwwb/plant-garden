@@ -130,20 +130,22 @@
 
   <!-- 分组详情弹窗 -->
   <view wx:if="{{showGroupModal}}" class="modal-mask" bindtap="closeGroupModal">
-    <view class="modal-content" catchtap="">
-      <view class="modal-header">
-        <text class="modal-title">📋 {{groupDetail.name}}</text>
-        <view class="modal-close" bindtap="closeGroupModal">✕</view>
+    <view class="modal-sheet" catchtap="preventBubble">
+      <view class="sheet-header">
+        <text class="sheet-title">📋 {{groupDetail.name}}</text>
+        <text class="sheet-close" bindtap="closeGroupModal">✕</text>
       </view>
-      <view class="modal-body">
-        <view wx:for="{{groupDetail.records}}" wx:key="recordId" class="record-row {{item._selected ? 'selected' : ''}}" bindtap="toggleDeleteRecord" data-id="{{item.recordId}}">
-          <text class="record-num">{{index + 1}}</text>
-          <text class="record-loc">{{item.location}}</text>
-          <text class="record-check">{{item._selected ? '☑️' : '⬜'}}</text>
+      <scroll-view class="sheet-body" scroll-y>
+        <view wx:for="{{groupDetail.records}}" wx:key="recordId" class="sheet-row {{item._selected ? 'selected' : ''}}" bindtap="toggleDeleteRecord" data-id="{{item.recordId}}">
+          <text class="row-num {{item._selected ? 'active' : ''}}">{{index + 1}}</text>
+          <text class="row-name">{{item.location}}</text>
+          <text class="row-arrow {{item._selected ? 'up' : ''}}">›</text>
         </view>
-      </view>
-      <view class="modal-footer">
-        <button class="btn delete-btn" catchtap="deleteSelectedRecords">🗑️ 删除{{groupDetail._selectedCount > 0 ? ' (' + groupDetail._selectedCount + ')' : ''}}</button>
+      </scroll-view>
+      <view class="sheet-footer">
+        <button class="btn del-btn" bindtap="deleteSelectedRecords">
+          🗑️ 删除{{groupDetail._selectedCount > 0 ? ' (' + groupDetail._selectedCount + ')' : ''}}
+        </button>
       </view>
     </view>
   </view>

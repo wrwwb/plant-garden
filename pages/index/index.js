@@ -537,6 +537,7 @@ Page({
         return {
           recordId: r._id || r.recordId || '',
           name: f['name'] || f['花名'] || '-',
+          _selected: false,
           location: f['location'] || f['推荐摆放位置'] || '-',
           nextWaterTime: formatDate(nextW),
           nextFertilizerTime: formatDate(nextF),
@@ -549,6 +550,64 @@ Page({
 
   closeGroupModal() {
     this.setData({ showGroupModal: false })
+  },
+
+  // 勾选/取消勾选要删除的记录
+  toggleDeleteRecord(e) {
+    const { id } = e.currentTarget.dataset
+    const detail = this.data.groupDetail
+    if (!detail || !detail.records) return
+    const records = detail.records.map(r => {
+      if (r.recordId === id) return { ...r, _selected: !r._selected }
+      return r
+    })
+    this.setData({ groupDetail: { ...detail, records } })
+  },
+
+  // 删除选中的记录
+  deleteSelectedRecords(e) {
+    const { name } = e.currentTarget.dataset
+    const detail = this.data.groupDetail
+    if (!detail || !detail.records) return
+    const selected = detail.records.filter(r => r._selected)
+    if (selected.length === 0) {
+      wx.showToast({ title: '请先勾选要删除的盆', icon: 'none' })
+      return
+    }
+    wx.showModal({
+      title: '🗑️ 确认删除',
+      content: `确定删除「${name}」${selected.length}盆吗？`,
+      success: (res) => {
+        if (!res.confirm) return
+        wx.showLoading({ title: '删除中...' })
+        let done = 0
+        const total = selected.length
+        selected.forEach(item => {
+          wx.cloud.callFunction({
+            name: 'deletePlant',
+            data: { recordId: item.recordId },
+            success: () => {
+              done++
+              if (done >= total) {
+                wx.hideLoading()
+                wx.showToast({ title: `已删除${total}盆` })
+                this.closeGroupModal()
+                this.loadPlants()
+              }
+            },
+            fail: () => {
+              done++
+              if (done >= total) {
+                wx.hideLoading()
+                wx.showToast({ title: '部分删除失败', icon: 'none' })
+                this.closeGroupModal()
+                this.loadPlants()
+              }
+            }
+          })
+        })
+      }
+    })
   },
 
   // 浇水单条记录

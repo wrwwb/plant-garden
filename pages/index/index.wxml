@@ -122,7 +122,7 @@
       </view>
 
       <!-- 删除按钮 -->
-      <view class="delete-btn" catchtap="deletePlant" data-id="{{item.recordIds[0]}}" data-name="{{item.name}}">✕</view>
+      <view class="delete-btn" catchtap="showGroupDetail" data-name="{{item.name}}" data-recordids="{{item.recordIds}}">✕</view>
       <view class="back-top-btn" catchtap="scrollToTop">↑</view>
     </view>
     </view>
@@ -137,7 +137,10 @@
       </view>
       <view class="modal-body">
         <view wx:for="{{groupDetail.records}}" wx:key="recordId" class="group-record-item">
-          <view class="group-record-info">
+          <view class="group-record-check" bindtap="toggleDeleteRecord" data-id="{{item.recordId}}">
+            <text class="check-icon {{item._selected ? 'checked' : ''}}">{{item._selected ? '✅' : '⬜'}}</text>
+          </view>
+          <view class="group-record-info" style="flex:1">
             <text class="group-record-name">{{item.location}}</text>
             <text class="group-record-time">💧 {{item.nextWaterTime}} · 🌱 {{item.nextFertilizerTime}}</text>
           </view>
@@ -150,6 +153,7 @@
       <view class="modal-footer">
         <button class="btn water-btn" catchtap="waterGroup" data-recordids="{{groupDetail.recordIdsStr}}" data-name="{{groupDetail.name}}">💧 全部浇水</button>
         <button class="btn fertilizer-btn" catchtap="fertilizeGroup" data-recordids="{{groupDetail.recordIdsStr}}" data-name="{{groupDetail.name}}">🌱 全部施肥</button>
+        <button class="btn delete-btn" catchtap="deleteSelectedRecords" data-name="{{groupDetail.name}}">🗑️ 删除</button>
       </view>
     </view>
   </view>

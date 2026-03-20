@@ -530,3 +530,10 @@ page {
   font-size: 28rpx;
   padding: 16rpx;
 }
+
+/* 删除勾选样式 */
+.group-record-check {
+  margin-right: 16rpx;
+  font-size: 40rpx;
+  line-height: 1;
+}

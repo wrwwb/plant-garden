@@ -62,18 +62,18 @@ function getPlants() {
     // 获取当前用户openid
     wx.cloud.callFunction({
       name: 'login',
-      success(loginRes => {
+      success: function(loginRes) {
         const openid = loginRes.result.openid
         if (!openid) return reject(new Error('openid获取失败'))
         db.collection('plants')
           .where({ _openid: openid })
           .orderBy('createdAt', 'desc')
           .get({
-            success: res => resolve(res.data),
-            fail: err => reject(err)
+            success: function(res) { resolve(res.data) },
+            fail: function(err) { reject(err) }
           })
       },
-      fail: err => reject(err)
+      fail: function(err) { reject(err) }
     })
   })
 }

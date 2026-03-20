@@ -3,7 +3,7 @@ const clouddb = require('../../utils/clouddb.js')
 
 // 内置数据
 const myPlants = [
-  {"Name":"郁金香","location":"客厅、阳台","waterFrequency":"2-3天/次（见干见湿）","light":"4-6小时散射光","temperature":"15-20℃","fertilizer":"花后以磷钾肥为主","humidity":"微湿","toxicityLevel":"轻微刺激","toxicitySource":"鳞茎含苷类，误食引起肠胃刺激","waterInterval":3,"nextWater":"2026-03-26","nextFertilizer":"2026-04-14","简介":"百合科球根花卉，原产中亚土耳其。花朵杯形色彩丰富，春季开花象征美好祝福。"},
+  {"name":"郁金香","location":"客厅、阳台","waterFrequency":"2-3天/次（见干见湿）","light":"4-6小时散射光","temperature":"15-20℃","fertilizer":"花后以磷钾肥为主","humidity":"微湿","toxicityLevel":"轻微刺激","toxicitySource":"鳞茎含苷类，误食引起肠胃刺激","waterInterval":3,"nextWater":"2026-03-26","nextFertilizer":"2026-04-14","简介":"百合科球根花卉，原产中亚土耳其。花朵杯形色彩丰富，春季开花象征美好祝福。"},
   {"name":"长寿花","location":"客厅、阳台","waterFrequency":"5-7天/次（宁干勿湿）","light":"充足散射光","temperature":"15-25℃","fertilizer":"春秋各施一次复合肥","humidity":"干燥","toxicityLevel":"中度刺激","toxicitySource":"含强心苷，误食引起心律不齐","waterInterval":6,"nextWater":"2026-03-26","nextFertilizer":"2026-04-09","简介":"景天科多肉，原产马达加斯加。花期超长从冬开到春，寓意健康长寿，节日花卉首选。"},
   {"name":"大仙女海芋","location":"客厅散光处","waterFrequency":"3-4天/次（微湿偏干）","light":"散射光，避免直射","temperature":"18-28℃","fertilizer":"生长期每月一次通用肥","humidity":"较高湿度","toxicityLevel":"中度刺激","toxicitySource":"草酸钙针晶，接触刺痛灼烧","waterInterval":4,"nextWater":"2026-03-20","nextFertilizer":"2026-04-09","简介":"天南星科草本，原产东南亚热带雨林。叶形优雅大气，热带雨林风情十足。"},
   {"name":"苹果竹芋","location":"客厅、卧室","waterFrequency":"2-3天/次（喜湿润）","light":"明亮散射光","temperature":"18-28℃","fertilizer":"生长期每2周一次薄肥","humidity":"较高湿度","toxicityLevel":"无刺激","toxicitySource":"基本无毒，可安全养护","waterInterval":3,"nextWater":"2026-03-19","nextFertilizer":"2026-04-09","简介":"竹芋科草本，原产南美热带雨林。叶片宽大银绿色条纹如青苹果，优雅清新。"},
@@ -120,6 +120,58 @@ Page({
         this.log('❌ 补全失败: ' + JSON.stringify(err))
       }
     })
+  },
+
+  // 客户端去重：每种植物只保留最新一条记录
+  async dedupMyPlants() {
+    this.log('🧹 开始去重...')
+    try {
+      const db = wx.cloud.database()
+      // 获取所有记录
+      const res = await db.collection('plants').get()
+      const all = res.data
+      this.log('云数据库共 ' + all.length + ' 条记录')
+      if (all.length <= 1) { this.log('无需去重'); return }
+      // 按 name 分组
+      const groups = {}
+      all.forEach(r => {
+        const n = r.name || r['花名'] || '-'
+        if (!groups[n]) groups[n] = []
+        groups[n].push(r)
+      })
+      // 找出需要删除的
+      const toDelete = []
+      for (const [name, records] of Object.entries(groups)) {
+        if (records.length <= 1) { this.log('✓ ' + name + ' 只有1条，跳过'); continue }
+        this.log('⚠️ ' + name + ' 有' + records.length + '条重复')
+        // 按 createdAt 降序，保留第一条（最新的）
+        records.sort(function(a, b) {
+          var ta = a.createdAt ? new Date(a.createdAt).getTime() : 0
+          var tb = b.createdAt ? new Date(b.createdAt).getTime() : 0
+          return tb - ta
+        })
+        for (var i = 1; i < records.length; i++) {
+          toDelete.push(records[i]._id)
+        }
+      }
+      if (!toDelete.length) { this.log('✅ 没有需要删除的重复记录'); return }
+      this.log('需要删除 ' + toDelete.length + ' 条重复记录')
+      // 逐条删除
+      var deleted = 0
+      for (var j = 0; j < toDelete.length; j++) {
+        try {
+          await db.collection('plants').doc(toDelete[j]).remove()
+          deleted++
+          this.log('🗑️ 删除: ' + toDelete[j])
+        } catch (e) {
+          this.log('❌ 删除失败: ' + toDelete[j] + ' ' + (e.message || e.errMsg))
+        }
+        await new Promise(function(r) { setTimeout(r, 300) })
+      }
+      this.log('✅ 去重完成！删除了 ' + deleted + ' 条重复记录')
+    } catch (e) {
+      this.log('❌ 去重失败: ' + (e.message || e.errMsg))
+    }
   },
 
   // 查询我的植物

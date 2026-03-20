@@ -21,6 +21,7 @@
   </view>
 
   <button class="desc-btn" bindtap="fillDescriptions">📝 补全植物简介</button>
+  <button class="desc-btn" bindtap="dedupMyPlants" style="margin-top:16rpx">🧹 去重（每种只保留一条）</button>
 
   <view id="upload-log" class="log-area">
     <!-- 上传日志 -->

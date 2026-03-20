@@ -127,9 +127,11 @@ Page({
     this.log('🧹 开始去重...')
     try {
       const db = wx.cloud.database()
-      // 先调getPlants确保云API已执行，openid已赋值
-      await clouddb.getPlants()
-      const openid = wx.cloud.openid
+      // 先调login云函数拿openid
+      const loginRes = await new Promise(function(resolve, reject) {
+        wx.cloud.callFunction({ name: 'login', success: resolve, fail: reject })
+      })
+      const openid = loginRes.result && loginRes.result.openid
       this.log('openid: ' + (openid || '未获取到'))
       if (!openid) { this.log('❌ 无法获取openid，请检查login云函数部署'); return }
       // 按openid过滤

@@ -59,26 +59,32 @@ function getPlants() {
   return new Promise(function(resolve, reject) {
     var db = getDB()
     if (!db) return reject(new Error('cloud db not available'))
-    // 先调login云函数拿openid
+    // 调login云函数拿openid
     wx.cloud.callFunction({
       name: 'login',
       success: function(loginRes) {
         var openid = loginRes.result && loginRes.result.openid
-        console.log('[getPlants] openid:', openid)
-        if (!openid) {
-          console.log('[getPlants] openid为空，查全部')
+        console.log('[getPlants] login返回openid:', openid)
+        if (openid) {
+          db.collection('plants').where({ _openid: openid }).orderBy('createdAt', 'desc').get({
+            success: function(res) { console.log('[getPlants] 用户记录:', res.data.length); resolve(res.data) },
+            fail: function(err) { reject(err) }
+          })
+        } else {
+          console.log('[getPlants] login未返回openid，查全部')
           db.collection('plants').orderBy('createdAt', 'desc').get({
             success: function(res) { console.log('[getPlants] 返回:', res.data.length); resolve(res.data) },
             fail: function(err) { reject(err) }
           })
-          return
         }
-        db.collection('plants').where({ _openid: openid }).orderBy('createdAt', 'desc').get({
-          success: function(res) { console.log('[getPlants] 用户记录:', res.data.length); resolve(res.data) },
-          fail: function(err) { reject(err) }
-        })
       },
-      fail: function(err) { reject(err) }
+      fail: function(err) {
+        console.log('[getPlants] login失败，查全部')
+        db.collection('plants').orderBy('createdAt', 'desc').get({
+          success: function(res) { resolve(res.data) },
+          fail: function(err2) { reject(err2) }
+        })
+      }
     })
   })
 }

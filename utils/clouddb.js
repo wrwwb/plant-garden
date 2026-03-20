@@ -59,13 +59,14 @@ function getPlants() {
   return new Promise(function(resolve, reject) {
     var db = getDB()
     if (!db) return reject(new Error('cloud db not available'))
-    // wx.cloud.openid 是客户端内置属性
     var openid = wx.cloud.openid
+    console.log('[getPlants] openid:', openid, 'hasOpenid:', !!openid)
     if (!openid) {
+      console.log('[getPlants] 无openid，查全部')
       db.collection('plants')
         .orderBy('createdAt', 'desc')
         .get({
-          success: function(res) { resolve(res.data) },
+          success: function(res) { console.log('[getPlants] 返回:', res.data.length, '条'); resolve(res.data) },
           fail: function(err) { reject(err) }
         })
       return
@@ -74,7 +75,7 @@ function getPlants() {
       .where({ _openid: openid })
       .orderBy('createdAt', 'desc')
       .get({
-        success: function(res) { resolve(res.data) },
+        success: function(res) { console.log('[getPlants] 用户记录:', res.data.length, '条'); resolve(res.data) },
         fail: function(err) { reject(err) }
       })
   })

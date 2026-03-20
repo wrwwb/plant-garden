@@ -127,15 +127,15 @@ Page({
     this.log('🧹 开始去重...')
     try {
       const db = wx.cloud.database()
-      // 获取当前用户的openid
+      // 先调getPlants确保云API已执行，openid已赋值
+      await clouddb.getPlants()
       const openid = wx.cloud.openid
       this.log('openid: ' + (openid || '未获取到'))
-      // 获取记录（优先按openid过滤）
-      const res = openid
-        ? await db.collection('plants').where({ _openid: openid }).get()
-        : await db.collection('plants').get()
+      if (!openid) { this.log('❌ 无法获取openid，请检查login云函数部署'); return }
+      // 按openid过滤
+      const res = await db.collection('plants').where({ _openid: openid }).get()
       const all = res.data
-      this.log('共 ' + all.length + ' 条记录')
+      this.log('你的记录: ' + all.length + ' 条')
       if (all.length <= 1) { this.log('无需去重'); return }
       // 按 name 分组
       const groups = {}

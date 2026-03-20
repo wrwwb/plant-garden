@@ -26,25 +26,7 @@ Page({
   },
 
   onLoad() {
-    this.log('初始化开始...')
-    // 延迟自动触发云函数批量上传
-    this.setData({ uploading: true })
-    setTimeout(() => {
-      this.log('正在通过云函数上传植物数据...')
-      wx.cloud.callFunction({
-        name: 'addPlants',
-        success: (res) => {
-          this.setData({ uploading: false })
-          this.log('✅ 上传成功! 结果: ' + JSON.stringify(res.result))
-          wx.showToast({ title: '上传成功', icon: 'success' })
-        },
-        fail: (err) => {
-          this.setData({ uploading: false })
-          this.log('❌ 上传失败: ' + JSON.stringify(err))
-          wx.showToast({ title: '上传失败', icon: 'none' })
-        }
-      })
-    }, 1000)
+    this.log('初始化页面已加载（不会自动上传）')
   },
 
   log(msg) {

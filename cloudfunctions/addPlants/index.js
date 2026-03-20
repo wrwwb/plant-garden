@@ -4,6 +4,9 @@ const db = cloud.database()
 const _ = db.command
 
 exports.main = async (event, context) => {
+  const wxContext = cloud.getWXContext()
+  const OPENID = wxContext.OPENID
+
   const plants = [
     {name:"郁金香",scientificName:"Tulipa gesneriana",family:"百合科 Liliaceae",origin:"中亚、土耳其",growthSeason:"春季开花，夏季休眠",heatResist:"30°C以上休眠",coldResist:"耐寒-15°C",soil:"疏松肥沃沙质土",location:"客厅、阳台",waterFrequency:"2-3天/次（见干见湿）",light:"4-6小时散射光",temperature:"15-20°C",fertilizer:"花后以磷钾肥为主",humidity:"微湿",toxicityLevel:"轻微刺激",toxicitySource:"鳞茎含苷类，误食引起肠胃刺激",waterInterval:3,简介:"百合科球根花卉，原产中亚土耳其。花朵杯形色彩丰富，春季开花象征美好祝福。"},
     {name:"长寿花",scientificName:"Kalanchoe blossfeldiana",family:"景天科 Crassulaceae",origin:"马达加斯加",growthSeason:"秋冬季开花",heatResist:"30°C以上减缓",coldResist:"不低于5°C",soil:"疏松透气颗粒土",location:"客厅、阳台",waterFrequency:"5-7天/次（宁干勿湿）",light:"充足散射光",temperature:"15-25°C",fertilizer:"春秋各施一次复合肥",humidity:"干燥",toxicityLevel:"中度刺激",toxicitySource:"含强心苷，误食引起心律不齐",waterInterval:6,简介:"景天科多肉，原产马达加斯加。花期超长从冬开到春，寓意健康长寿，节日花卉首选。"},
@@ -40,8 +43,8 @@ exports.main = async (event, context) => {
         updatedAt: db.serverDate()
       }
 
-      // 先查是否已有同名植物
-      const existing = await db.collection('plants').where({ name: p.name }).get()
+      // 先查当前用户是否已有同名植物
+      const existing = await db.collection('plants').where({ name: p.name, _openid: OPENID }).get()
       
       if (existing.data.length > 0) {
         // 已有记录，更新字段

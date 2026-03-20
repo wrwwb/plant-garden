@@ -59,16 +59,22 @@ function getPlants() {
   return new Promise((resolve, reject) => {
     const db = getDB()
     if (!db) return reject(new Error('cloud db not available'))
-    db.collection('plants')
-      .orderBy('createdAt', 'desc')
-      .get({
-        success: res => {
-          resolve(res.data)
-        },
-        fail: err => {
-          reject(err)
-        }
-      })
+    // 获取当前用户openid
+    wx.cloud.callFunction({
+      name: 'login',
+      success(loginRes => {
+        const openid = loginRes.result.openid
+        if (!openid) return reject(new Error('openid获取失败'))
+        db.collection('plants')
+          .where({ _openid: openid })
+          .orderBy('createdAt', 'desc')
+          .get({
+            success: res => resolve(res.data),
+            fail: err => reject(err)
+          })
+      },
+      fail: err => reject(err)
+    })
   })
 }
 

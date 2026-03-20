@@ -378,11 +378,6 @@ Page({
     ]
     if (!records || records.length === 0) return []
 
-    // DEBUG: 打印第一条记录的字段
-    const firstRaw = records[0].fields || records[0]
-    console.log('🔍 DEBUG 第一条记录字段:', JSON.stringify(Object.keys(firstRaw)))
-    console.log('🔍 DEBUG 第一条记录值:', JSON.stringify(firstRaw))
-
     const now = Date.now()
     const today = new Date(now)
 
@@ -399,6 +394,7 @@ Page({
       const humidity = f['humidity'] || f['湿度/特殊注意事项'] || '-'
       const toxicityLevel = f['toxicityLevel'] || f['毒性安全等级'] || '无刺激'
       const toxicitySource = f['toxicitySource'] || f['备注'] || ''
+      const plantDesc = f['简介'] || ''
 
       // 日期字段（云数据库返回的可能是字符串或时间戳）
       const parseDate = (val) => {
@@ -430,6 +426,7 @@ Page({
         humidity,
         toxicityLevel,
         toxicitySource,
+        plantDesc,
         scientificName: f['scientificName'] || '',
         family: f['family'] || '',
         origin: f['origin'] || '',
@@ -610,6 +607,7 @@ Page({
         humidity: '微湿',
         toxicityLevel: '轻微刺激',
         toxicitySource: '鳞茎含苷类，误食引起肠胃刺激',
+        plantDesc: '百合科球根花卉，原产中亚土耳其。花朵杯形色彩丰富，春季开花象征美好祝福。',
         lastWaterTime: '3月10日',
         nextWaterTime: '4月3日',
         nextFertilizerTime: '4月14日',

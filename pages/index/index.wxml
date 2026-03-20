@@ -74,6 +74,9 @@
         <view wx:if="{{item.toxicitySource}}" class="toxic-reason">☠️ {{item.toxicitySource}}</view>
       </view>
 
+      <!-- 植物简介 -->
+      <view wx:if="{{item.plantDesc}}" class="plant-desc">{{item.plantDesc}}</view>
+
       <!-- 详细资料展示 -->
       <view class="plant-detail-tags">
         <view wx:if="{{item.waterFrequency}}" class="detail-tag">💧 {{item.waterFrequency}}</view>

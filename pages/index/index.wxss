@@ -213,6 +213,16 @@ page {
   color: #888;
 }
 
+.plant-desc {
+  font-size: 24rpx;
+  color: #666;
+  line-height: 1.6;
+  margin-top: 10rpx;
+  padding: 10rpx 0;
+  border-top: 1rpx dashed #e0e0e0;
+  border-bottom: 1rpx dashed #e0e0e0;
+}
+
 .toxic-reason {
   font-size: 22rpx;
   color: #999;

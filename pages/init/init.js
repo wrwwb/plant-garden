@@ -3,13 +3,13 @@ const clouddb = require('../../utils/clouddb.js')
 
 // 内置数据
 const myPlants = [
-  {"name":"郁金香","location":"客厅、阳台","waterFrequency":"2-3天/次（见干见湿）","light":"4-6小时散射光","temperature":"15-20℃","fertilizer":"花后以磷钾肥为主","humidity":"微湿","toxicityLevel":"轻微刺激","toxicitySource":"鳞茎含苷类，误食引起肠胃刺激","waterInterval":3,"nextWater":"2026-03-26","nextFertilizer":"2026-04-14"},
-  {"name":"长寿花","location":"客厅、阳台","waterFrequency":"5-7天/次（宁干勿湿）","light":"充足散射光","temperature":"15-25℃","fertilizer":"春秋各施一次复合肥","humidity":"干燥","toxicityLevel":"中度刺激","toxicitySource":"含强心苷，误食引起心律不齐","waterInterval":6,"nextWater":"2026-03-26","nextFertilizer":"2026-04-09"},
-  {"name":"大仙女海芋","location":"客厅散光处","waterFrequency":"3-4天/次（微湿偏干）","light":"散射光，避免直射","temperature":"18-28℃","fertilizer":"生长期每月一次通用肥","humidity":"较高湿度","toxicityLevel":"中度刺激","toxicitySource":"草酸钙针晶，接触刺痛灼烧","waterInterval":4,"nextWater":"2026-03-20","nextFertilizer":"2026-04-09"},
-  {"name":"苹果竹芋","location":"客厅、卧室","waterFrequency":"2-3天/次（喜湿润）","light":"明亮散射光","temperature":"18-28℃","fertilizer":"生长期每2周一次薄肥","humidity":"较高湿度","toxicityLevel":"无刺激","toxicitySource":"基本无毒，可安全养护","waterInterval":3,"nextWater":"2026-03-19","nextFertilizer":"2026-04-09"},
-  {"name":"油画婚礼吊兰","location":"客厅、书房","waterFrequency":"4-5天/次（见干见湿）","light":"散射光","temperature":"15-28℃","fertilizer":"生长期每月一次","humidity":"中等湿度","toxicityLevel":"无刺激","toxicitySource":"可食用，无明显毒性","waterInterval":5,"nextWater":"2026-03-23","nextFertilizer":"2026-04-07"},
-  {"name":"吉姆蕨","location":"卫生间、北窗台","waterFrequency":"2-3天/次（喜湿润）","light":"散射光或明亮处","temperature":"15-25℃","fertilizer":"生长期每2周一次","humidity":"高湿度","toxicityLevel":"无刺激","toxicitySource":"基本无毒，蕨类可安全养护","waterInterval":3,"nextWater":"2026-03-19","nextFertilizer":"2026-04-24"},
-  {"name":"绣球花","location":"阳台、花园","waterFrequency":"1-2天/次（喜湿润）","light":"充足散射光","temperature":"15-25℃","fertilizer":"花后以磷钾肥为主","humidity":"湿润","toxicityLevel":"轻微刺激","toxicitySource":"含氰苷化合物，误食引起轻度不适","waterInterval":2,"nextWater":"2026-03-18","nextFertilizer":"2026-03-25"}
+  {"Name":"郁金香","location":"客厅、阳台","waterFrequency":"2-3天/次（见干见湿）","light":"4-6小时散射光","temperature":"15-20℃","fertilizer":"花后以磷钾肥为主","humidity":"微湿","toxicityLevel":"轻微刺激","toxicitySource":"鳞茎含苷类，误食引起肠胃刺激","waterInterval":3,"nextWater":"2026-03-26","nextFertilizer":"2026-04-14","简介":"百合科球根花卉，原产中亚土耳其。花朵杯形色彩丰富，春季开花象征美好祝福。"},
+  {"name":"长寿花","location":"客厅、阳台","waterFrequency":"5-7天/次（宁干勿湿）","light":"充足散射光","temperature":"15-25℃","fertilizer":"春秋各施一次复合肥","humidity":"干燥","toxicityLevel":"中度刺激","toxicitySource":"含强心苷，误食引起心律不齐","waterInterval":6,"nextWater":"2026-03-26","nextFertilizer":"2026-04-09","简介":"景天科多肉，原产马达加斯加。花期超长从冬开到春，寓意健康长寿，节日花卉首选。"},
+  {"name":"大仙女海芋","location":"客厅散光处","waterFrequency":"3-4天/次（微湿偏干）","light":"散射光，避免直射","temperature":"18-28℃","fertilizer":"生长期每月一次通用肥","humidity":"较高湿度","toxicityLevel":"中度刺激","toxicitySource":"草酸钙针晶，接触刺痛灼烧","waterInterval":4,"nextWater":"2026-03-20","nextFertilizer":"2026-04-09","简介":"天南星科草本，原产东南亚热带雨林。叶形优雅大气，热带雨林风情十足。"},
+  {"name":"苹果竹芋","location":"客厅、卧室","waterFrequency":"2-3天/次（喜湿润）","light":"明亮散射光","temperature":"18-28℃","fertilizer":"生长期每2周一次薄肥","humidity":"较高湿度","toxicityLevel":"无刺激","toxicitySource":"基本无毒，可安全养护","waterInterval":3,"nextWater":"2026-03-19","nextFertilizer":"2026-04-09","简介":"竹芋科草本，原产南美热带雨林。叶片宽大银绿色条纹如青苹果，优雅清新。"},
+  {"name":"油画婚礼吊兰","location":"客厅、书房","waterFrequency":"4-5天/次（见干见湿）","light":"散射光","temperature":"15-28℃","fertilizer":"生长期每月一次","humidity":"中等湿度","toxicityLevel":"无刺激","toxicitySource":"可食用，无明显毒性","waterInterval":5,"nextWater":"2026-03-23","nextFertilizer":"2026-04-07","简介":"鸭跖草科蔓生植物，原产墨西哥。叶片紫绿银条纹如油画，垂吊效果惊艳。"},
+  {"name":"吉姆蕨","location":"卫生间、北窗台","waterFrequency":"2-3天/次（喜湿润）","light":"散射光或明亮处","temperature":"15-25℃","fertilizer":"生长期每2周一次","humidity":"高湿度","toxicityLevel":"无刺激","toxicitySource":"基本无毒，蕨类可安全养护","waterInterval":3,"nextWater":"2026-03-19","nextFertilizer":"2026-04-24","简介":"肾蕨科蕨类，叶片翠绿飘逸如瀑布。净化空气效果好，喜高湿度环境。"},
+  {"name":"绣球花","location":"阳台、花园","waterFrequency":"1-2天/次（喜湿润）","light":"充足散射光","temperature":"15-25℃","fertilizer":"花后以磷钾肥为主","humidity":"湿润","toxicityLevel":"轻微刺激","toxicitySource":"含氰苷化合物，误食引起轻度不适","waterInterval":2,"nextWater":"2026-03-18","nextFertilizer":"2026-03-25","简介":"绣球科灌木，原产中国日本。花色随土壤酸碱变化蓝粉皆美，花期从春到秋。"}
 ]
 
 function parseDate(str) {
@@ -78,6 +78,7 @@ Page({
           toxicityLevel: p.toxicityLevel,
           toxicitySource: p.toxicitySource,
           waterInterval: p.waterInterval,
+          简介: p.简介 || '',
           updatedAt: db.serverDate()
         }
         // 先查是否已有同名植物

@@ -127,10 +127,15 @@ Page({
     this.log('🧹 开始去重...')
     try {
       const db = wx.cloud.database()
-      // 获取所有记录
-      const res = await db.collection('plants').get()
+      // 获取当前用户的openid
+      const openid = wx.cloud.openid
+      this.log('openid: ' + (openid || '未获取到'))
+      // 获取记录（优先按openid过滤）
+      const res = openid
+        ? await db.collection('plants').where({ _openid: openid }).get()
+        : await db.collection('plants').get()
       const all = res.data
-      this.log('云数据库共 ' + all.length + ' 条记录')
+      this.log('共 ' + all.length + ' 条记录')
       if (all.length <= 1) { this.log('无需去重'); return }
       // 按 name 分组
       const groups = {}
@@ -139,12 +144,11 @@ Page({
         if (!groups[n]) groups[n] = []
         groups[n].push(r)
       })
-      // 找出需要删除的
+      // 找出需要删除的（只删自己的）
       const toDelete = []
       for (const [name, records] of Object.entries(groups)) {
         if (records.length <= 1) { this.log('✓ ' + name + ' 只有1条，跳过'); continue }
         this.log('⚠️ ' + name + ' 有' + records.length + '条重复')
-        // 按 createdAt 降序，保留第一条（最新的）
         records.sort(function(a, b) {
           var ta = a.createdAt ? new Date(a.createdAt).getTime() : 0
           var tb = b.createdAt ? new Date(b.createdAt).getTime() : 0
@@ -156,7 +160,6 @@ Page({
       }
       if (!toDelete.length) { this.log('✅ 没有需要删除的重复记录'); return }
       this.log('需要删除 ' + toDelete.length + ' 条重复记录')
-      // 逐条删除
       var deleted = 0
       for (var j = 0; j < toDelete.length; j++) {
         try {

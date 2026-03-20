@@ -59,12 +59,11 @@ function getPlants() {
   return new Promise(function(resolve, reject) {
     var db = getDB()
     if (!db) return reject(new Error('cloud db not available'))
-    // 调login云函数拿openid
+    // 调login云函数拿openid（openId在result.userInfo.openId）
     wx.cloud.callFunction({
       name: 'login',
       success: function(loginRes) {
-        console.log('[getPlants] login返回:', JSON.stringify(loginRes))
-        var openid = loginRes.result && loginRes.result.openid
+        var openid = loginRes.result && loginRes.result.userInfo && loginRes.result.userInfo.openId
         console.log('[getPlants] openid:', openid)
         if (openid) {
           db.collection('plants').where({ _openid: openid }).orderBy('createdAt', 'desc').get({
@@ -80,7 +79,7 @@ function getPlants() {
         }
       },
       fail: function(err) {
-        console.log('[getPlants] login失败:', JSON.stringify(err))
+        console.log('[getPlants] login失败，查全部')
         db.collection('plants').orderBy('createdAt', 'desc').get({
           success: function(res) { resolve(res.data) },
           fail: function(err2) { reject(err2) }

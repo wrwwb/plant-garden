@@ -135,7 +135,8 @@ Page({
           wx.cloud.callFunction({ name: 'login', success: resolve, fail: reject })
         })
         this.log('login返回: ' + JSON.stringify(loginRes))
-        openid = loginRes.result && loginRes.result.openid
+        // openId 在 result.userInfo.openId
+        openid = loginRes.result && loginRes.result.userInfo && loginRes.result.userInfo.openId
       } catch(e) {
         this.log('login调用失败: ' + JSON.stringify(e))
       }

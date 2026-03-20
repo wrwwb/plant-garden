@@ -626,7 +626,7 @@ Page({
   // 批量浇水整个分组
   waterGroup(e) {
     const { recordids, name } = e.currentTarget.dataset
-    const ids = Array.isArray(recordids) ? recordids : recordids.split(',')
+    const ids = Array.isArray(recordids) ? recordids : (recordids ? recordids.split(',') : [])
     wx.showLoading({ title: '浇水...' })
     let idx = 0
     const next = () => {
@@ -688,7 +688,7 @@ Page({
   // 批量施肥整个分组
   fertilizeGroup(e) {
     const { recordids, name } = e.currentTarget.dataset
-    const ids = Array.isArray(recordids) ? recordids : recordids.split(',')
+    const ids = Array.isArray(recordids) ? recordids : (recordids ? recordids.split(',') : [])
     wx.showLoading({ title: '施肥...' })
     let idx = 0
     const next = () => {

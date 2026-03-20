@@ -117,8 +117,8 @@
       </view>
 
       <view class="plant-actions">
-        <button class="btn water-btn" catchtap="showGroupDetail" data-name="{{item.name}}" data-recordids="{{item.recordIds}}">💧 浇水</button>
-        <button class="btn fertilizer-btn" catchtap="showGroupDetail" data-name="{{item.name}}" data-recordids="{{item.recordIds}}">🌱 施肥</button>
+        <button class="btn water-btn" catchtap="waterGroup" data-recordids="{{item.recordIds}}">💧 浇水</button>
+        <button class="btn fertilizer-btn" catchtap="fertilizeGroup" data-recordids="{{item.recordIds}}">🌱 施肥</button>
       </view>
 
       <!-- 删除按钮 -->
@@ -151,8 +151,6 @@
         </view>
       </view>
       <view class="modal-footer">
-        <button class="btn water-btn" catchtap="waterGroup" data-recordids="{{groupDetail.recordIdsStr}}" data-name="{{groupDetail.name}}">💧 全部浇水</button>
-        <button class="btn fertilizer-btn" catchtap="fertilizeGroup" data-recordids="{{groupDetail.recordIdsStr}}" data-name="{{groupDetail.name}}">🌱 全部施肥</button>
         <button class="btn delete-btn" catchtap="deleteSelectedRecords" data-name="{{groupDetail.name}}">🗑️ 删除</button>
       </view>
     </view>

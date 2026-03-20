@@ -58,12 +58,12 @@
 
       <!-- 植物名字快速导航 -->
       <view class="plant-nav">
-        <view wx:for="{{plants}}" wx:key="recordId" class="plant-nav-item" bindtap="scrollToPlant" data-index="{{index}}">
+        <view wx:for="{{plants}}" wx:key="name" class="plant-nav-item" bindtap="scrollToPlant" data-index="{{index}}">
           {{item.name}}
         </view>
       </view>
 
-      <view wx:for="{{plants}}" wx:key="recordId" id="plant-{{index}}" class="plant-card {{item.needWater ? 'urgent' : ''}}" style="background: {{item.cardColor || 'white'}}" data-index="{{index}}" data-recordid="{{item.recordId}}">
+      <view wx:for="{{plants}}" wx:key="name" id="plant-{{index}}" class="plant-card {{item.needWater ? 'urgent' : ''}}" style="background: {{item.cardColor || 'white'}}" data-index="{{index}}" bindtap="showGroupDetail" data-name="{{item.name}}" data-recordids="{{item.recordIds}}">
       <view class="plant-header">
         <view class="plant-title">
           <text class="plant-name">{{item.name}}</text>
@@ -95,7 +95,7 @@
         <view class="time-row">
           <view class="time-item half">
             <view class="time-label">💧 上次浇水</view>
-            <picker mode="date" value="{{item.lastWaterDate}}" bindchange="editLastWater" data-index="{{index}}" data-id="{{item.recordId}}">
+            <picker mode="date" value="{{item.lastWaterDate}}" bindchange="editLastWater" data-index="{{index}}" data-id="{{item.recordIds[0]}}">
               <view class="time-value time-edit">{{item.lastWaterTime}} ✏️</view>
             </picker>
           </view>
@@ -117,14 +117,40 @@
       </view>
 
       <view class="plant-actions">
-        <button class="btn water-btn" catchtap="waterPlant" data-id="{{item.recordId}}" data-name="{{item.name}}">💧 浇水</button>
-        <button class="btn fertilizer-btn" catchtap="fertilizePlant" data-id="{{item.recordId}}" data-name="{{item.name}}">🌱 施肥</button>
+        <button class="btn water-btn" catchtap="showGroupDetail" data-name="{{item.name}}" data-recordids="{{item.recordIds}}">💧 浇水</button>
+        <button class="btn fertilizer-btn" catchtap="showGroupDetail" data-name="{{item.name}}" data-recordids="{{item.recordIds}}">🌱 施肥</button>
       </view>
 
       <!-- 删除按钮 -->
-      <view class="delete-btn" catchtap="deletePlant" data-id="{{item.recordId}}" data-name="{{item.name}}">✕</view>
+      <view class="delete-btn" catchtap="deletePlant" data-id="{{item.recordIds[0]}}" data-name="{{item.name}}">✕</view>
       <view class="back-top-btn" catchtap="scrollToTop">↑</view>
     </view>
+    </view>
+  </view>
+
+  <!-- 分组详情弹窗 -->
+  <view wx:if="{{showGroupModal}}" class="modal-mask" bindtap="closeGroupModal">
+    <view class="modal-content" catchtap="">
+      <view class="modal-header">
+        <text class="modal-title">📋 {{groupDetail.name}}</text>
+        <view class="modal-close" bindtap="closeGroupModal">✕</view>
+      </view>
+      <view class="modal-body">
+        <view wx:for="{{groupDetail.records}}" wx:key="recordId" class="group-record-item">
+          <view class="group-record-info">
+            <text class="group-record-name">{{item.location}}</text>
+            <text class="group-record-time">💧 {{item.nextWaterTime}} · 🌱 {{item.nextFertilizerTime}}</text>
+          </view>
+          <view class="group-record-btns">
+            <button class="btn water-btn small" catchtap="waterSingle" data-id="{{item.recordId}}" data-name="{{item.name}}">💧</button>
+            <button class="btn fertilizer-btn small" catchtap="fertilizeSingle" data-id="{{item.recordId}}" data-name="{{item.name}}">🌱</button>
+          </view>
+        </view>
+      </view>
+      <view class="modal-footer">
+        <button class="btn water-btn" catchtap="waterGroup" data-recordids="{{groupDetail.recordIdsStr}}" data-name="{{groupDetail.name}}">💧 全部浇水</button>
+        <button class="btn fertilizer-btn" catchtap="fertilizeGroup" data-recordids="{{groupDetail.recordIdsStr}}" data-name="{{groupDetail.name}}">🌱 全部施肥</button>
+      </view>
     </view>
   </view>
 </view>

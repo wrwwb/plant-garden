@@ -10,8 +10,8 @@ Page({
     needFertilizerCount: 0,
     loading: true,
     error: '',
-     currentUserId: '',
-    cityName: ''
+    scrollIntoView: '',
+    currentUserId: ''
   },
 
   // 定时检查：每天首次打开时更新所有植物的下次浇水时间
@@ -31,16 +31,11 @@ Page({
 
   // 获取天气用于更新浇水计划
   getLocalWeatherForUpdate() {
-    const savedAddr = wx.getStorageSync('userAddress')
-    if (!savedAddr) return
-    wx.request({
-      url: `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(savedAddr)}&count=1&language=zh`,
-      success: (geoRes) => {
-        const results = (geoRes.data || {}).results || []
-        if (results.length === 0) return
-        const loc = results[0]
+    wx.getLocation({
+      type: 'wgs84',
+      success: (res) => {
         wx.request({
-          url: `https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&hourly=temperature_2m,relative_humidity_2m,precipitation&forecast_days=3&timezone=Asia/Shanghai`,
+          url: `https://api.open-meteo.com/v1/forecast?latitude=${res.latitude}&longitude=${res.longitude}&hourly=temperature_2m,relative_humidity_2m,precipitation&forecast_days=3&timezone=Asia/Shanghai`,
           success: (weatherRes) => {
             try {
               const data = weatherRes.data || {}
@@ -74,10 +69,30 @@ Page({
 
   onShow() {
     this.loadPlants()
-    this.getLocalWeather()
   },
 
-  calculateWaterFreq(weatherData) {
+  // 统一获取天气调整后的浇水间隔（使用 Open-Meteo）
+  _getWeatherWaterDays(callback) {
+    wx.getLocation({
+      type: 'wgs84',
+      success(res) {
+        wx.request({
+          url: `https://api.open-meteo.com/v1/forecast?latitude=${res.latitude}&longitude=${res.longitude}&hourly=temperature_2m,relative_humidity_2m,precipitation&forecast_days=3&timezone=Asia/Shanghai`,
+          success(weatherRes) {
+            try {
+              const data = weatherRes.data || {}
+              const waterFreq = this.calculateWaterFreq(data)
+              // 从 "5-6天/次" 提取数字
+              const match = waterFreq.match(/(\d+)/)
+              callback(null, match ? parseInt(match[1]) : 5)
+            } catch (e) { callback(e) }
+          },
+          fail: (e) => callback(e)
+        })
+      },
+      fail: (e) => callback(e)
+    })
+  },
     try {
       // Open-Meteo 格式: hourly.temperature_2m, relative_humidity_2m, precipitation
       const hourly = weatherData.hourly || {}
@@ -133,95 +148,53 @@ Page({
       }
     })
   },
-  // 手动输入地址
-  editAddress() {
+  getLocalWeather() {
     const that = this
-    const current = wx.getStorageSync('userAddress') || ''
-    wx.showModal({
-      title: '📍 设置地址',
-      editable: true,
-      placeholderText: '请输入城市名，如 上海',
-      content: current,
+    wx.getLocation({
+      type: 'wgs84',
       success(res) {
-        if (res.confirm && res.content && res.content.trim()) {
-          const addr = res.content.trim()
-          wx.setStorageSync('userAddress', addr)
-          that.setData({ cityName: addr })
-          that.fetchWeatherByAddress(addr)
-        }
-      }
-    })
-  },
-
-  // 通过地址获取天气（geocoding → weather）
-  fetchWeatherByAddress(address) {
-    const that = this
-    that.setData({ localWeather: '获取天气中...' })
-    // 第一步：地理编码
-    wx.request({
-      url: `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(address)}&count=1&language=zh`,
-      success(geoRes) {
-        const results = (geoRes.data || {}).results || []
-        if (results.length === 0) {
-          that.setData({ localWeather: '地址未找到，请重新输入', cityName: address })
-          return
-        }
-        const loc = results[0]
-        const lat = loc.latitude
-        const lon = loc.longitude
-        const displayName = loc.name + (loc.admin1 ? ' ' + loc.admin1 : '') + (loc.country ? ' ' + loc.country : '')
-        // 第二步：获取天气
+        // 使用 Open-Meteo API（免费无需 key）
         wx.request({
-          url: `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,relative_humidity_2m,precipitation,weather_code&forecast_days=3&timezone=Asia/Shanghai`,
+          url: `https://api.open-meteo.com/v1/forecast?latitude=${res.latitude}&longitude=${res.longitude}&hourly=temperature_2m,relative_humidity_2m,precipitation,weather_code&forecast_days=3&timezone=Asia/Shanghai`,
           success(weatherRes) {
-            that._parseWeather(weatherRes.data, displayName)
+            try {
+              const data = weatherRes.data || {}
+              const hourly = data.hourly || {}
+              const temps = hourly.temperature_2m || []
+              const humidities = hourly.relative_humidity_2m || []
+              const codes = hourly.weather_code || []
+              const now = new Date()
+              const hourStr = now.toISOString().slice(11, 13).padStart(2, '0') + ':00'
+              let idx = hourly.time ? hourly.time.indexOf(hourStr) : -1
+              if (idx < 0) idx = 0
+              const temp = temps[idx] || '--'
+              const humidity = humidities[idx] || '--'
+              const code = codes[idx] || 0
+              const weatherText = that._weatherCodeToText(code)
+              const waterFreq = that.calculateWaterFreq(data)
+              let icon = '☀️'
+              if (code >= 51 && code < 70) icon = '🌧️'
+              else if (code >= 71 && code < 80) icon = '❄️'
+              else if (code >= 80 && code < 90) icon = '🌦️'
+              else if (code >= 95) icon = '⛈️'
+              else if (code >= 3) icon = '☁️'
+              that.setData({
+                localWeather: `${Math.round(temp)}°C · ${weatherText} · 湿度${Math.round(humidity)}%`,
+                weatherIcon: icon,
+                recommendedWaterFreq: waterFreq
+              })
+            } catch (e) {
+              that.setData({ localWeather: '天气获取失败', recommendedWaterFreq: '5-6天/次' })
+            }
           },
           fail() {
-            that.setData({ localWeather: '天气获取失败', cityName: displayName })
+            that.setData({ localWeather: '天气获取失败', recommendedWaterFreq: '5-6天/次' })
           }
         })
       },
       fail() {
-        that.setData({ localWeather: '地址解析失败', cityName: address })
+        that.setData({ localWeather: '天气获取失败', recommendedWaterFreq: '5-6天/次' })
       }
-    })
-  },
-
-  getLocalWeather() {
-    const savedAddr = wx.getStorageSync('userAddress')
-    if (savedAddr) {
-      this.fetchWeatherByAddress(savedAddr)
-    } else {
-      this.setData({ localWeather: '点击📍设置地址获取天气', cityName: '' })
-    }
-  },
-
-  _parseWeather(data, cityName) {
-    if (!data) { this.setData({ localWeather: '天气获取失败', recommendedWaterFreq: '5-6天/次' }); return }
-    const hourly = data.hourly || {}
-    const temps = hourly.temperature_2m || []
-    const humidities = hourly.relative_humidity_2m || []
-    const codes = hourly.weather_code || []
-    const now = new Date()
-    const hourStr = String(now.getHours()).padStart(2, '0') + ':00'
-    let idx = hourly.time ? hourly.time.indexOf(hourStr) : -1
-    if (idx < 0) idx = 0
-    const temp = temps[idx] || '--'
-    const humidity = humidities[idx] || '--'
-    const code = codes[idx] || 0
-    const weatherText = this._weatherCodeToText(code)
-    const waterFreq = this.calculateWaterFreq(data)
-    let icon = '☀️'
-    if (code >= 51 && code < 70) icon = '🌧️'
-    else if (code >= 71 && code < 80) icon = '❄️'
-    else if (code >= 80 && code < 90) icon = '🌦️'
-    else if (code >= 95) icon = '⛈️'
-    else if (code >= 3) icon = '☁️'
-    this.setData({
-      localWeather: `${Math.round(temp)}°C · ${weatherText} · 湿度${Math.round(humidity)}%`,
-      weatherIcon: icon,
-      recommendedWaterFreq: waterFreq,
-      cityName: cityName || ''
     })
   },
 
@@ -256,85 +229,6 @@ Page({
     })
   },
 
-  showNeedsWater() {
-    const plants = this.data.plants || []
-    const needs = plants.filter(p => p.needWater)
-    if (needs.length === 0) {
-      wx.showToast({ title: '太棒了！没有需要浇水的植物 🎉', icon: 'none' })
-      return
-    }
-    const names = needs.map((p, i) => `${i + 1}. ${p.name}`).join('\n')
-    wx.showModal({
-      title: `💧 待浇水（${needs.length}株）`,
-      content: names,
-      showCancel: false,
-      confirmText: '好的'
-    })
-  },
-
-  scrollToTop() {
-    wx.pageScrollTo({ scrollTop: 0, duration: 300 })
-  },
-
-  scrollToPlant(e) {
-    const index = e.currentTarget.dataset.index
-    wx.createSelectorQuery().select('#plant-' + index).boundingClientRect(res => {
-      if (res) {
-        wx.pageScrollTo({ scrollTop: res.top, duration: 300 })
-      }
-    }).exec()
-  },
-
-  showNeedsFertilizer() {
-    const plants = this.data.plants || []
-    const needs = plants.filter(p => p.needFertilizer)
-    if (needs.length === 0) {
-      wx.showToast({ title: '太棒了！没有需要施肥的植物 🎉', icon: 'none' })
-      return
-    }
-    const names = needs.map((p, i) => `${i + 1}. ${p.name}`).join('\n')
-    wx.showModal({
-      title: `🌱 待施肥（${needs.length}株）`,
-      content: names,
-      showCancel: false,
-      confirmText: '好的'
-    })
-  },
-
-
-
-  editLastWater(e) {
-    const { index, id } = e.currentTarget.dataset
-    const plants = this.data.plants
-    if (!plants || index >= plants.length) return
-    const current = plants[index]
-    // date picker 返回格式：YYYY-MM-DD
-    const newDate = e.detail.value
-    const date = new Date(newDate)
-    const nextWaterDate = new Date(date.getTime() + (current.waterInterval || 7) * 24 * 60 * 60 * 1000)
-    wx.showLoading({ title: '更新中...' })
-    wx.cloud.callFunction({
-      name: 'updatePlant',
-      data: {
-        recordId: id,
-        data: {
-          '浇水时间': date,
-          '下次浇水时间': nextWaterDate
-        }
-      },
-      success: () => {
-        wx.hideLoading()
-        wx.showToast({ title: '已更新' })
-        this.loadPlants()
-      },
-      fail: (err) => {
-        wx.hideLoading()
-        wx.showToast({ title: '更新失败', icon: 'none' })
-        console.error('更新上次浇水失败:', err)
-      }
-    })
-  },
-
   loadPlants() {
     this.setData({ loading: true, error: '' })
     
@@ -366,22 +260,7 @@ Page({
   },
 
   processRecords(records) {
-    const cardColors = [
-      'rgba(232,245,233,0.6)', // 浅绿
-      'rgba(255,243,224,0.6)', // 浅橙
-      'rgba(227,242,253,0.6)', // 浅蓝
-      'rgba(255,235,238,0.6)', // 浅粉
-      'rgba(243,229,245,0.6)', // 浅紫
-      'rgba(225,245,254,0.6)', // 浅青
-      'rgba(255,248,225,0.6)', // 浅黄
-      'rgba(232,234,246,0.6)', // 浅靛
-    ]
     if (!records || records.length === 0) return []
-
-    // DEBUG: 打印第一条记录的字段
-    const firstRaw = records[0].fields || records[0]
-    console.log('🔍 DEBUG 第一条记录字段:', JSON.stringify(Object.keys(firstRaw)))
-    console.log('🔍 DEBUG 第一条记录值:', JSON.stringify(firstRaw))
 
     const now = Date.now()
     const today = new Date(now)
@@ -392,7 +271,7 @@ Page({
       // 兼容中英文字段名
       const name = f['name'] || f['花名'] || '-'
       const location = f['location'] || f['推荐摆放位置'] || '-'
-      const waterFrequency = f['waterFrequency'] || f['waterFreq'] || f['浇水频率'] || '-'
+      const waterFrequency = f['waterFrequency'] || f['浇水频率'] || '-'
       const light = f['light'] || f['光照要求'] || '-'
       const temperature = f['temperature'] || f['温度要求'] || '-'
       const fertilizer = f['fertilizer'] || f['施肥'] || '-'
@@ -417,8 +296,6 @@ Page({
 
       const waterInterval = f['waterInterval'] || 7
 
-      const colorIdx = (r._id || '').length > 0 ? (r._id.charCodeAt(0) + (r._id.charCodeAt(1) || 0)) % cardColors.length : 0
-
       return {
         recordId: r._id || r.recordId || '',
         name,
@@ -430,21 +307,11 @@ Page({
         humidity,
         toxicityLevel,
         toxicitySource,
-        scientificName: f['scientificName'] || '',
-        family: f['family'] || '',
-        origin: f['origin'] || '',
-        growthSeason: f['growthSeason'] || '',
-        heatResist: f['heatResist'] || '',
-        coldResist: f['coldResist'] || '',
-        soil: f['soil'] || '',
         lastWaterTime: this.formatDate(lastWaterTime),
-        lastWaterDate: lastWaterTime instanceof Date ? lastWaterTime.toISOString().slice(0, 10) : new Date(lastWaterTime).toISOString().slice(0, 10),
         nextWaterTime: this.formatDate(nextWaterTime),
-        lastFertilizerTime: this.formatDate(parseDate(f['施肥时间']) || new Date(now - 30 * 24 * 60 * 60 * 1000)),
         nextFertilizerTime: this.formatDate(nextFertilizerTime),
         needWater,
-        needFertilizer,
-        cardColor: cardColors[colorIdx]
+        needFertilizer
       }
     })
   },
@@ -458,12 +325,6 @@ Page({
   goToAdd() {
     wx.navigateTo({
       url: '/pages/add/add'
-    })
-  },
-
-  goToInit() {
-    wx.navigateTo({
-      url: '/pages/init/init'
     })
   },
 
@@ -496,27 +357,42 @@ Page({
   updateWaterTime(recordId, name) {
     wx.showLoading({ title: '更新中...' })
     const that = this
-    const plant = (this.data.plants || []).find(p => p.recordId === recordId)
+    const plant = (this.data.plants || []).find(p => p.id === recordId)
     const baseDays = plant ? (plant.waterInterval || 7) : 7
 
     // 先获取天气，再计算动态间隔
-    const savedAddr = wx.getStorageSync('userAddress')
-    if (!savedAddr) { that._doUpdateWater(recordId, name, baseDays); return }
-    wx.request({
-      url: `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(savedAddr)}&count=1&language=zh`,
-      success(geoRes) {
-        const results = (geoRes.data || {}).results || []
-        if (results.length === 0) { that._doUpdateWater(recordId, name, baseDays); return }
-        const loc = results[0]
+    wx.getLocation({
+      type: 'wgs84',
+      success(loc) {
         wx.request({
-          url: `https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&hourly=temperature_2m,relative_humidity_2m,precipitation&forecast_days=3&timezone=Asia/Shanghai`,
+          url: `https://wttr.in/${loc.latitude},${loc.longitude}?format=j1`,
           success(weatherRes) {
             let days = baseDays
             try {
-              const data = weatherRes.data || {}
-              const waterFreq = that.calculateWaterFreq(data)
-              const match = waterFreq.match(/(\d+)/)
-              days = match ? parseInt(match[1]) : baseDays
+              const forecast = (weatherRes.data || {}).weather || []
+              let totalRain = 0, avgTemp = 0, avgHumidity = 0, d = 0
+              for (let i = 0; i < Math.min(3, forecast.length); i++) {
+                const day = forecast[i]
+                if (day.hourly) {
+                  for (let h = 0; h < day.hourly.length; h++) {
+                    const hour = day.hourly[h]
+                    totalRain += parseFloat(hour.precipMM || '0')
+                    avgTemp += parseFloat(hour.temp_C || '20')
+                    avgHumidity += parseInt(hour.humidity || '50')
+                    d++
+                  }
+                }
+              }
+              if (d > 0) { avgTemp /= d; avgHumidity /= d }
+              // 根据天气微调间隔
+              if (avgTemp > 30) days -= 2
+              else if (avgTemp > 25) days -= 1
+              else if (avgTemp < 10) days += 2
+              if (avgHumidity > 80) days += 1
+              else if (avgHumidity < 30) days -= 1
+              if (totalRain > 10) days += 1
+              if (totalRain > 30) days += 1
+              days = Math.max(1, Math.min(15, days))
             } catch (e) { days = baseDays }
             that._doUpdateWater(recordId, name, days)
           },
@@ -549,26 +425,30 @@ Page({
     wx.showLoading({ title: '更新中...' })
     const that = this
     // 施肥周期也根据天气微调
-    const savedAddr = wx.getStorageSync('userAddress')
-    if (!savedAddr) { that._doUpdateFertilizer(recordId, name, 14); return }
-    wx.request({
-      url: `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(savedAddr)}&count=1&language=zh`,
-      success(geoRes) {
-        const results = (geoRes.data || {}).results || []
-        if (results.length === 0) { that._doUpdateFertilizer(recordId, name, 14); return }
-        const loc = results[0]
+    wx.getLocation({
+      type: 'wgs84',
+      success(loc) {
         wx.request({
-          url: `https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&hourly=temperature_2m&forecast_days=3&timezone=Asia/Shanghai`,
+          url: `https://wttr.in/${loc.latitude},${loc.longitude}?format=j1`,
           success(weatherRes) {
-            let days = 14
+            let days = 14 // 默认2周
             try {
-              const temps = (weatherRes.data || {}).hourly || {}
-              const t = temps.temperature_2m || []
-              if (t.length > 0) {
-                const avgTemp = t.slice(0, 72).reduce((a, b) => a + b, 0) / Math.min(72, t.length)
-                if (avgTemp > 25) days = 10
-                else if (avgTemp < 10) days = 30
+              const forecast = (weatherRes.data || {}).weather || []
+              let avgTemp = 0, d = 0
+              for (let i = 0; i < Math.min(3, forecast.length); i++) {
+                const day = forecast[i]
+                if (day.hourly) {
+                  for (let h = 0; h < day.hourly.length; h++) {
+                    avgTemp += parseFloat(day.hourly[h].temp_C || '20')
+                    d++
+                  }
+                }
               }
+              if (d > 0) avgTemp /= d
+              // 生长期（温暖）施肥更频繁
+              if (avgTemp > 25) days = 10
+              else if (avgTemp < 10) days = 30
+              else days = 14
             } catch (e) {}
             that._doUpdateFertilizer(recordId, name, days)
           },
@@ -619,9 +499,47 @@ Page({
     ]
   },
 
+  // 触摸开始
+  touchStart(e) {
+    this.setData({ startX: e.touches[0].clientX })
+  },
 
+  // 触摸移动
+  touchMove(e) {
+    const currentX = e.touches[0].clientX
+    const diff = this.data.startX - currentX
+    const index = e.currentTarget.dataset.index
+    
+    if (diff > 50) {
+      // 向左滑动，显示删除按钮
+      const plants = this.data.plants
+      plants[index].isSwiping = true
+      this.setData({ plants })
+    } else if (diff < -50) {
+      // 向右滑动，隐藏删除按钮
+      const plants = this.data.plants
+      plants[index].isSwiping = false
+      this.setData({ plants })
+    }
+  },
 
+  // 滚动到待浇水植物
+  scrollToWater() {
+    const idx = this.data.plants.findIndex(p => p.needWater)
+    if (idx >= 0) {
+      this.setData({ scrollIntoView: 'plant-' + idx })
+      setTimeout(() => this.setData({ scrollIntoView: '' }), 500)
+    }
+  },
 
+  // 滚动到待施肥植物
+  scrollToFertilizer() {
+    const idx = this.data.plants.findIndex(p => p.needFertilizer)
+    if (idx >= 0) {
+      this.setData({ scrollIntoView: 'plant-' + idx })
+      setTimeout(() => this.setData({ scrollIntoView: '' }), 500)
+    }
+  },
 
   // 删除植物
   deletePlant(e) {

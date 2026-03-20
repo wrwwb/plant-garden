@@ -1,6 +1,7 @@
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
+const _ = db.command
 
 exports.main = async (event, context) => {
   const plants = [
@@ -18,10 +19,7 @@ exports.main = async (event, context) => {
 
   for (const p of plants) {
     try {
-      const waterMs = (p.waterInterval || 7) * 24 * 60 * 60 * 1000
-      const fertMs = 14 * 24 * 60 * 60 * 1000
-      const doc = {
-        name: p.name,
+      const updateData = {
         scientificName: p.scientificName || '',
         family: p.family || '',
         origin: p.origin || '',
@@ -38,16 +36,34 @@ exports.main = async (event, context) => {
         toxicityLevel: p.toxicityLevel,
         toxicitySource: p.toxicitySource,
         waterInterval: p.waterInterval,
-        '浇水时间': now,
-        '下次浇水时间': new Date(now.getTime() + waterMs),
-        '下次施肥时间': new Date(now.getTime() + fertMs),
-        createdAt: db.serverDate(),
         updatedAt: db.serverDate()
       }
-      const res = await db.collection('plants').add({ data: doc })
-      results.push({ name: p.name, success: true, id: res._id })
+
+      // 先查是否已有同名植物
+      const existing = await db.collection('plants').where({ name: p.name }).get()
+      
+      if (existing.data.length > 0) {
+        // 已有记录，更新字段
+        const recordId = existing.data[0]._id
+        await db.collection('plants').doc(recordId).update({ data: updateData })
+        results.push({ name: p.name, action: 'updated', id: recordId })
+      } else {
+        // 没有记录，创建新的
+        const waterMs = (p.waterInterval || 7) * 24 * 60 * 60 * 1000
+        const fertMs = 14 * 24 * 60 * 60 * 1000
+        const doc = {
+          ...updateData,
+          name: p.name,
+          '浇水时间': now,
+          '下次浇水时间': new Date(now.getTime() + waterMs),
+          '下次施肥时间': new Date(now.getTime() + fertMs),
+          createdAt: db.serverDate()
+        }
+        const res = await db.collection('plants').add({ data: doc })
+        results.push({ name: p.name, action: 'created', id: res._id })
+      }
     } catch (e) {
-      results.push({ name: p.name, success: false, error: e.message })
+      results.push({ name: p.name, action: 'error', error: e.message })
     }
   }
 

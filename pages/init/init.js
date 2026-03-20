@@ -56,12 +56,12 @@ Page({
 
   // 上传我的植物（逐条上传）
   async uploadMyPlants() {
-    this.log('开始上传我的植物...')
+    this.log('开始上传/更新我的植物...')
+    const db = wx.cloud.database()
     for (let i = 0; i < myPlants.length; i++) {
       const p = myPlants[i]
       try {
-        const plant = {
-          name: p.name,
+        const updateData = {
           scientificName: p.scientificName || '',
           family: p.family || '',
           origin: p.origin || '',
@@ -78,18 +78,31 @@ Page({
           toxicityLevel: p.toxicityLevel,
           toxicitySource: p.toxicitySource,
           waterInterval: p.waterInterval,
-          '浇水时间': new Date(),
-          '下次浇水时间': p.nextWater ? parseDate(p.nextWater) : new Date(),
-          '下次施肥时间': p.nextFertilizer ? parseDate(p.nextFertilizer) : new Date()
+          updatedAt: db.serverDate()
         }
-        await clouddb.addPlant(plant)
-        this.log('✓ ' + p.name + ' 上传成功')
+        // 先查是否已有同名植物
+        const existing = await db.collection('plants').where({ name: p.name }).get()
+        if (existing.data.length > 0) {
+          const recordId = existing.data[0]._id
+          await clouddb.updatePlant(recordId, updateData)
+          this.log('✓ ' + p.name + ' 更新成功')
+        } else {
+          const plant = {
+            ...updateData,
+            name: p.name,
+            '浇水时间': new Date(),
+            '下次浇水时间': p.nextWater ? parseDate(p.nextWater) : new Date(),
+            '下次施肥时间': p.nextFertilizer ? parseDate(p.nextFertilizer) : new Date()
+          }
+          await clouddb.addPlant(plant)
+          this.log('✓ ' + p.name + ' 新建成功')
+        }
       } catch (e) {
         this.log('✗ ' + p.name + ' 失败: ' + (e.message || e.errMsg || JSON.stringify(e)))
       }
       await new Promise(r => setTimeout(r, 500))
     }
-    this.log('我的植物上传完成！')
+    this.log('上传完成！')
   },
 
   // 云函数批量上传

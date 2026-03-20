@@ -1,10 +1,14 @@
 <view class="container">
+  <!-- 顶部标题栏 -->
+  <view class="page-header">
+    <text class="header-title">{{currentUserId || '未设置用户'}}的 🌸 花园浇水助手</text>
+  </view>
+
   <!-- 天气提示 -->
   <view class="weather-banner">
     <text class="icon">{{weatherIcon}}</text>
     <text>{{localWeather}}</text>
-    <text class="weather-user" bindtap="setUserId">{{currentUserId || '设置'}}</text>
-    <text wx:if="{{cityName}}" class="city-name">📍 {{cityName}}</text>
+    <text class="city-name" bindtap="editAddress">📍 {{cityName || '点击设置地址'}}</text>
     <view class="init-link" bindtap="goToInit">🔧</view>
   </view>
 

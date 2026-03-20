@@ -3,8 +3,7 @@
     "pages/index/index",
     "pages/add/add",
     "pages/init/init",
-    "pages/init-ref/init-ref",
-    "pages/test/test"
+    "pages/init-ref/init-ref"
   ],
   "cloud": true,
   "pageOrientation": "portrait",

@@ -120,6 +120,24 @@ Page({
     })
   },
 
+  // 补全植物简介
+  fillDescriptions() {
+    this.log('📝 正在补全植物简介...')
+    wx.cloud.callFunction({
+      name: 'updatePlantDescriptions',
+      success: (res) => {
+        if (res.result && res.result.success) {
+          this.log('✅ 补全完成！共更新 ' + res.result.updated + ' 条记录')
+        } else {
+          this.log('❌ 补全失败: ' + JSON.stringify(res.result))
+        }
+      },
+      fail: (err) => {
+        this.log('❌ 补全失败: ' + JSON.stringify(err))
+      }
+    })
+  },
+
   // 查询我的植物
   async checkMyPlants() {
     this.log('查询中...')

@@ -16,6 +16,12 @@
 
   <button class="cloud-upload-btn" bindtap="cloudUpload">☁️ 云函数批量上传</button>
 
+  <view class="description">
+    <text>点击下方按钮，为已有植物补全简介</text>
+  </view>
+
+  <button class="desc-btn" bindtap="fillDescriptions">📝 补全植物简介</button>
+
   <view id="upload-log" class="log-area">
     <!-- 上传日志 -->
   </view>

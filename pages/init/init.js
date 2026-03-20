@@ -63,8 +63,10 @@ Page({
           简介: p.简介 || '',
           updatedAt: db.serverDate()
         }
-        // 先查是否已有同名植物
-        const existing = await db.collection('plants').where({ name: p.name }).get()
+        // 先查当前用户是否已有同名植物
+        const myOpenid = wx.cloud.openid
+        var query = myOpenid ? { name: p.name, _openid: myOpenid } : { name: p.name }
+        const existing = await db.collection('plants').where(query).get()
         if (existing.data.length > 0) {
           const recordId = existing.data[0]._id
           await clouddb.updatePlant(recordId, updateData)

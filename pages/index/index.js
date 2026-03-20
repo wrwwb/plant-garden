@@ -422,11 +422,29 @@ Page({
     const now = Date.now()
     const today = new Date(now)
 
+    // 统计名字出现次数，用于去重显示
+    const nameCount = {}
+    records.forEach(r => {
+      const f = r.fields || r
+      const n = f['name'] || f['花名'] || '-'
+      nameCount[n] = (nameCount[n] || 0) + 1
+    })
+    // 记录每个名字当前是第几次出现
+    const nameSeen = {}
+
     return records.map(r => {
       const f = r.fields || r
 
       // 兼容中英文字段名
       const name = f['name'] || f['花名'] || '-'
+      // 重复名字加数字：绿萝 / 绿萝(2) / 绿萝(3)
+      const displayName = (() => {
+        if (nameCount[name] > 1) {
+          nameSeen[name] = (nameSeen[name] || 0) + 1
+          return nameSeen[name] > 1 ? `${name}(${nameSeen[name]})` : name
+        }
+        return name
+      })()
       const location = f['location'] || f['推荐摆放位置'] || '-'
       const waterFrequency = f['waterFrequency'] || f['waterFreq'] || f['浇水频率'] || '-'
       const light = f['light'] || f['光照要求'] || '-'
@@ -458,7 +476,8 @@ Page({
 
       return {
         recordId: r._id || r.recordId || '',
-        name,
+        name: displayName,
+        displayName,
         location,
         waterFrequency,
         fertilizer,
@@ -621,7 +640,7 @@ Page({
     const nextFertilizerTime = Date.now() + days * 24 * 60 * 60 * 1000
     wx.cloud.callFunction({
       name: 'updatePlant',
-      data: { recordId, data: { '下次施肥时间': new Date(nextFertilizerTime) } },
+      data: { recordId, data: { '下次施肥时间': new Date(nextFertilizerTime), '施肥时间': new Date() } },
       success: () => {
         wx.hideLoading()
         wx.showToast({ title: `🌱 ${name} 施肥成功！` })

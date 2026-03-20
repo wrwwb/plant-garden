@@ -576,7 +576,7 @@ Page({
     }
     wx.showModal({
       title: '🗑️ 确认删除',
-      content: `确定删除「${name}」${selected.length}盆吗？`,
+      content: selected.length > 1 ? `确定删除「${name}」${selected.length}盆吗？` : `确定删除「${name}」吗？`,
       success: (res) => {
         if (!res.confirm) return
         wx.showLoading({ title: '删除中...' })
@@ -590,7 +590,7 @@ Page({
               done++
               if (done >= total) {
                 wx.hideLoading()
-                wx.showToast({ title: `已删除${total}盆` })
+                wx.showToast({ title: total > 1 ? `已删除${total}盆` : '已删除' })
                 this.closeGroupModal()
                 this.loadPlants()
               }

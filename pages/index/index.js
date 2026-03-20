@@ -157,32 +157,73 @@ Page({
   fetchWeatherByAddress(address) {
     const that = this
     that.setData({ localWeather: '获取天气中...' })
-    // 第一步：地理编码
-    wx.request({
-      url: `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(address)}&count=1&language=zh`,
-      success(geoRes) {
-        const results = (geoRes.data || {}).results || []
-        if (results.length === 0) {
-          that.setData({ localWeather: '地址未找到，请重新输入', cityName: address })
-          return
-        }
-        const loc = results[0]
-        const lat = loc.latitude
-        const lon = loc.longitude
-        const displayName = loc.name + (loc.admin1 ? ' ' + loc.admin1 : '') + (loc.country ? ' ' + loc.country : '')
-        // 第二步：获取天气
-        wx.request({
-          url: `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,relative_humidity_2m,precipitation,weather_code&forecast_days=3&timezone=Asia/Shanghai`,
-          success(weatherRes) {
-            that._parseWeather(weatherRes.data, displayName)
-          },
-          fail() {
-            that.setData({ localWeather: '天气获取失败', cityName: displayName })
+    // 并行：1）用 Open-Meteo 算浇水频率，2）用 wttr.in 获取当前天气
+    const weatherTask = new Promise((resolve) => {
+      wx.request({
+        url: `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(address)}&count=1&language=zh`,
+        success(geoRes) {
+          const results = (geoRes.data || {}).results || []
+          if (results.length === 0) { resolve({ data: null }); return }
+          const loc = results[0]
+          wx.request({
+            url: `https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&hourly=temperature_2m,relative_humidity_2m,precipitation,weather_code&forecast_days=3&timezone=Asia/Shanghai`,
+            success(r) { resolve(r) },
+            fail() { resolve({ data: null }) }
+          })
+        },
+        fail() { resolve({ data: null }) }
+      })
+    })
+
+    const currentTask = new Promise((resolve) => {
+      wx.request({
+        url: `https://wttr.in/${encodeURIComponent(address)}?format=%C+%t+%h&m`,
+        success(r) {
+          const text = (r.data || '').trim()
+          // 解析格式: "Sunny +15°C 44%"
+          const parts = text.match(/^(.+?)\s+([+-]\d+°C)\s+(\d+)%/)
+          if (parts) {
+            resolve({
+              condition: parts[1].trim(),
+              temp: parts[2].trim(),
+              humidity: parts[3].trim() + '%'
+            })
+          } else {
+            resolve(null)
           }
+        },
+        fail() { resolve(null) }
+      })
+    })
+
+    Promise.all([weatherTask, currentTask]).then(([weatherRes, current]) => {
+      // 设置当前天气（用 wttr.in 更准确）
+      if (current) {
+        const iconMap = {
+          'Sunny': '☀️', 'Clear': '☀️', 'Partly cloudy': '⛅', 'Cloudy': '☁️',
+          'Overcast': '☁️', 'Mist': '🌫️', 'Fog': '🌫️', 'Rain': '🌧️',
+          'Light rain': '🌦️', 'Heavy rain': '🌧️', 'Snow': '❄️',
+          'Light snow': '🌨️', 'Thunderstorm': '⛈️', 'Blowing snow': '🌨️'
+        }
+        const icon = iconMap[current.condition] || '🌤️'
+        that.setData({
+          localWeather: `${current.temp} · ${current.condition} · 湿度${current.humidity}`,
+          weatherIcon: icon,
+          cityName: address || ''
         })
-      },
-      fail() {
-        that.setData({ localWeather: '地址解析失败', cityName: address })
+      }
+
+      // 用 Open-Meteo 算浇水频率
+      const data = (weatherRes || {}).data
+      if (!data) {
+        that.setData({ recommendedWaterFreq: '5-6天/次' })
+        return
+      }
+      try {
+        const waterFreq = that.calculateWaterFreq(data)
+        that.setData({ recommendedWaterFreq: waterFreq })
+      } catch(e) {
+        that.setData({ recommendedWaterFreq: '5-6天/次' })
       }
     })
   },

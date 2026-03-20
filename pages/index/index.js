@@ -545,7 +545,7 @@ Page({
           needFertilizer: nextF <= new Date(now)
         }
       })
-    this.setData({ groupDetail: { name, records: detailRecords, recordIdsStr: ids.join(',') }, showGroupModal: true })
+    this.setData({ groupDetail: { name, records: detailRecords, recordIdsStr: ids.join(','), _selectedCount: 0 }, showGroupModal: true })
   },
 
   closeGroupModal() {
@@ -557,26 +557,32 @@ Page({
     const { id } = e.currentTarget.dataset
     const detail = this.data.groupDetail
     if (!detail || !detail.records) return
+    let selectedCount = 0
     const records = detail.records.map(r => {
+      if (r.recordId === id) {
+        const newSelected = !r._selected
+        if (newSelected) selectedCount++
+      } else if (r._selected) {
+        selectedCount++
+      }
       if (r.recordId === id) return { ...r, _selected: !r._selected }
       return r
     })
-    this.setData({ groupDetail: { ...detail, records } })
+    this.setData({ groupDetail: { ...detail, records, _selectedCount: selectedCount } })
   },
 
   // 删除选中的记录
-  deleteSelectedRecords(e) {
-    const { name } = e.currentTarget.dataset
+  deleteSelectedRecords() {
     const detail = this.data.groupDetail
     if (!detail || !detail.records) return
     const selected = detail.records.filter(r => r._selected)
     if (selected.length === 0) {
-      wx.showToast({ title: '请先勾选要删除的盆', icon: 'none' })
+      wx.showToast({ title: '请先点击要删除的编号', icon: 'none' })
       return
     }
     wx.showModal({
       title: '🗑️ 确认删除',
-      content: selected.length > 1 ? `确定删除「${name}」${selected.length}盆吗？` : `确定删除「${name}」吗？`,
+      content: selected.length > 1 ? `确定删除这 ${selected.length} 盆吗？` : `确定删除「${detail.name}」吗？`,
       success: (res) => {
         if (!res.confirm) return
         wx.showLoading({ title: '删除中...' })
@@ -586,7 +592,7 @@ Page({
           wx.cloud.callFunction({
             name: 'deletePlant',
             data: { recordId: item.recordId },
-            success: () => {
+            success: (res) => {
               done++
               if (done >= total) {
                 wx.hideLoading()
@@ -595,7 +601,7 @@ Page({
                 this.loadPlants()
               }
             },
-            fail: () => {
+            fail: (err) => {
               done++
               if (done >= total) {
                 wx.hideLoading()

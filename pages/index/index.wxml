@@ -97,14 +97,14 @@
             </picker>
           </view>
           <view class="time-item half">
-            <view class="time-label">💧 下次浇水</view>
-            <view class="time-value {{item.needWater ? 'urgent' : ''}}">{{item.nextWaterTime}}</view>
+            <view class="time-label">🌱 上次施肥</view>
+            <view class="time-value">{{item.lastFertilizerTime}}</view>
           </view>
         </view>
         <view class="time-row">
           <view class="time-item half">
-            <view class="time-label">🌱 上次施肥</view>
-            <view class="time-value">{{item.lastFertilizerTime}}</view>
+            <view class="time-label">💧 下次浇水</view>
+            <view class="time-value {{item.needWater ? 'urgent' : ''}}">{{item.nextWaterTime}}</view>
           </view>
           <view class="time-item half">
             <view class="time-label">🌱 下次施肥</view>

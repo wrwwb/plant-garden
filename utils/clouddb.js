@@ -56,28 +56,29 @@ function getUserId() {
 
 // 获取当前用户的植物列表
 function getPlants() {
-  return new Promise((resolve, reject) => {
-    const db = getDB()
+  return new Promise(function(resolve, reject) {
+    var db = getDB()
     if (!db) return reject(new Error('cloud db not available'))
-    // 获取当前用户openid
-    wx.cloud.callFunction({
-      name: 'login',
-      success: function(loginRes) {
-        const openid = loginRes.result.openid
-        if (!openid) return reject(new Error('openid获取失败'))
-        db.collection('plants')
-          .where({ _openid: openid })
-          .orderBy('createdAt', 'desc')
-          .get({
-            success: function(res) { resolve(res.data) },
-            fail: function(err) { reject(err) }
-          })
-      },
-      fail: function(err) { reject(err) }
-    })
+    // wx.cloud.openid 是客户端内置属性
+    var openid = wx.cloud.openid
+    if (!openid) {
+      db.collection('plants')
+        .orderBy('createdAt', 'desc')
+        .get({
+          success: function(res) { resolve(res.data) },
+          fail: function(err) { reject(err) }
+        })
+      return
+    }
+    db.collection('plants')
+      .where({ _openid: openid })
+      .orderBy('createdAt', 'desc')
+      .get({
+        success: function(res) { resolve(res.data) },
+        fail: function(err) { reject(err) }
+      })
   })
 }
-
 // 添加植物
 function addPlant(plant) {
   return new Promise((resolve, reject) => {

@@ -63,7 +63,7 @@
         </view>
       </view>
 
-      <view wx:for="{{plants}}" wx:key="name" id="plant-{{index}}" class="plant-card {{item.needWater ? 'urgent' : ''}}" style="background: {{item.cardColor || 'white'}}" data-index="{{index}}" bindtap="showGroupDetail" data-name="{{item.name}}" data-recordids="{{item.recordIds}}">
+      <view wx:for="{{plants}}" wx:key="name" id="plant-{{index}}" class="plant-card {{item.needWater ? 'urgent' : ''}}" style="background: {{item.cardColor || 'white'}}" data-index="{{index}}" bindtap="showGroupDetail" data-name="{{item.name}}" data-recordids="{{item.recordIds.join(',')}}">
       <view class="plant-header">
         <view class="plant-title">
           <text class="plant-name">{{item.name}}</text>
@@ -117,8 +117,8 @@
       </view>
 
       <view class="plant-actions">
-        <button class="btn water-btn" catchtap="showGroupDetail" data-name="{{item.name}}" data-recordids="{{item.recordIds}}">💧 浇水</button>
-        <button class="btn fertilizer-btn" catchtap="showGroupDetail" data-name="{{item.name}}" data-recordids="{{item.recordIds}}">🌱 施肥</button>
+        <button class="btn water-btn" catchtap="showGroupDetail" data-name="{{item.name}}" data-recordids="{{item.recordIds.join(',')}}">💧 浇水</button>
+        <button class="btn fertilizer-btn" catchtap="showGroupDetail" data-name="{{item.name}}" data-recordids="{{item.recordIds.join(',')}}">🌱 施肥</button>
       </view>
 
       <!-- 删除按钮 -->

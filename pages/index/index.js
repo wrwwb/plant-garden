@@ -527,7 +527,7 @@ Page({
       if (!date || isNaN(date.getTime())) return '-'
       return `${date.getMonth() + 1}月${date.getDate()}日`
     }
-    const ids = recordids.split(',')
+    const ids = Array.isArray(recordids) ? recordids : recordids.split(',')
     const detailRecords = allRecords
       .filter(r => ids.includes(r._id || r.recordId || ''))
       .map(r => {
@@ -567,7 +567,7 @@ Page({
   // 批量浇水整个分组
   waterGroup(e) {
     const { recordids, name } = e.currentTarget.dataset
-    const ids = recordids.split(',')
+    const ids = Array.isArray(recordids) ? recordids : recordids.split(',')
     wx.showLoading({ title: '浇水...' })
     let idx = 0
     const next = () => {
@@ -629,7 +629,7 @@ Page({
   // 批量施肥整个分组
   fertilizeGroup(e) {
     const { recordids, name } = e.currentTarget.dataset
-    const ids = recordids.split(',')
+    const ids = Array.isArray(recordids) ? recordids : recordids.split(',')
     wx.showLoading({ title: '施肥...' })
     let idx = 0
     const next = () => {

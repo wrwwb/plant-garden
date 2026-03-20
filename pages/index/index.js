@@ -383,6 +383,12 @@ Page({
   loadPlants() {
 
     clouddb.getPlants().then(rawPlants => {
+      console.log('[loadPlants] 云数据库返回:', rawPlants.length, '条')
+      // 打印每条记录的_id和name，方便排查
+      rawPlants.forEach((r, i) => {
+        const f = r.fields || r
+        console.log(`  [${i}] _id=${r._id || 'MISSING'} name=${f['name'] || f['花名'] || 'MISSING'}`)
+      })
       if (rawPlants.length === 0) {
         const plants = this.getMockData()
         this.setData({
@@ -394,6 +400,10 @@ Page({
         return
       }
       const plants = this.processRecordsGrouped(rawPlants)
+      console.log('[loadPlants] 分组结果:', plants.length, '种')
+      plants.forEach((p, i) => {
+        console.log(`  [${i}] ${p.name} → recordIds=[${p.recordIds}] count=${p.count}`)
+      })
       this.setData({
         plants,
         needWaterCount: plants.filter(p => p.needWater).length,
@@ -409,6 +419,16 @@ Page({
   // 按名字分组：一种植物一张卡片
   processRecordsGrouped(records) {
     if (!records || records.length === 0) return []
+
+    // 过滤掉没有_id的记录（云数据库会自动填_id）
+    const validRecords = records.filter(r => {
+      const id = r._id || r.recordId
+      if (!id) {
+        console.warn('[grouped] 跳过无_id记录:', r)
+        return false
+      }
+      return true
+    })
 
     const now = Date.now()
     const today = new Date(now)
@@ -433,7 +453,7 @@ Page({
 
     // 按名字分组
     const groups = {}
-    records.forEach(r => {
+    validRecords.forEach(r => {
       const f = r.fields || r
       const name = f['name'] || f['花名'] || '-'
       if (!groups[name]) groups[name] = []
@@ -554,6 +574,7 @@ Page({
   deleteSelectedItems() {
     const items = this.data.deleteItems.filter(i => i._selected)
     if (!items.length) return
+    console.log('[deleteSelectedItems] 要删除:', items.map(i => `${i.recordId}(${i.location})`).join(', '))
     wx.showModal({
       title: '⚠️ 确认删除',
       content: `确定删除 ${items.length} 盆「${this.data.deletePlantName}」吗？`,
@@ -569,11 +590,16 @@ Page({
             this.loadPlants()
             return
           }
+          const item = items[idx++]
+          console.log(`[delete] 正在删除 recordId=${item.recordId}`)
           wx.cloud.callFunction({
             name: 'deletePlant',
-            data: { recordId: items[idx++].recordId },
-            success: () => next(),
-            fail: () => { wx.hideLoading(); wx.showToast({ title: '删除失败', icon: 'none' }) }
+            data: { recordId: item.recordId },
+            success: (res) => {
+              console.log(`[delete] 成功:`, JSON.stringify(res.result))
+              next()
+            },
+            fail: (err) => { wx.hideLoading(); wx.showToast({ title: '删除失败', icon: 'none' }); console.error('[delete] 失败:', err) }
           })
         }
         next()

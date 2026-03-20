@@ -500,6 +500,7 @@ page {
 .group-record-info {
   display: flex;
   flex-direction: column;
+  flex: 1;
 }
 .group-record-name {
   font-size: 28rpx;
@@ -534,6 +535,23 @@ page {
 /* 删除勾选样式 */
 .group-record-check {
   margin-right: 16rpx;
-  font-size: 40rpx;
-  line-height: 1;
+}
+.check-circle {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  border: 3rpx solid #ccc;
+  background: #fff;
+  transition: all 0.2s;
+}
+.check-circle.checked {
+  border-color: #4CAF50;
+  background: #4CAF50;
+}
+.group-record-item.selected .group-record-info {
+  opacity: 0.7;
+}
+.group-record-item.selected .group-record-name {
+  text-decoration: line-through;
+  color: #999;
 }

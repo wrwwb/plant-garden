@@ -136,11 +136,11 @@
         <view class="modal-close" bindtap="closeGroupModal">✕</view>
       </view>
       <view class="modal-body">
-        <view wx:for="{{groupDetail.records}}" wx:key="recordId" class="group-record-item">
+        <view wx:for="{{groupDetail.records}}" wx:key="recordId" class="group-record-item {{item._selected ? 'selected' : ''}}">
           <view class="group-record-check" bindtap="toggleDeleteRecord" data-id="{{item.recordId}}">
-            <text class="check-icon {{item._selected ? 'checked' : ''}}">{{item._selected ? '✅' : '⬜'}}</text>
+            <view class="check-circle {{item._selected ? 'checked' : ''}}"></view>
           </view>
-          <view class="group-record-info" style="flex:1">
+          <view class="group-record-info">
             <text class="group-record-name">{{item.location}}</text>
             <text class="group-record-time">💧 {{item.nextWaterTime}} · 🌱 {{item.nextFertilizerTime}}</text>
           </view>

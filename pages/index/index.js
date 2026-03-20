@@ -437,11 +437,11 @@ Page({
 
       // 兼容中英文字段名
       const name = f['name'] || f['花名'] || '-'
-      // 重复名字加数字：绿萝 / 绿萝(2) / 绿萝(3)
+      // 重复名字加数量：绿萝 / 绿萝 x3
       const displayName = (() => {
         if (nameCount[name] > 1) {
           nameSeen[name] = (nameSeen[name] || 0) + 1
-          return nameSeen[name] > 1 ? `${name}(${nameSeen[name]})` : name
+          return `${name} x${nameCount[name]}`
         }
         return name
       })()

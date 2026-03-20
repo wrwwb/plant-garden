@@ -1,0 +1,9 @@
+{
+  "name": "dedupPlants",
+  "version": "1.0.0",
+  "description": "按植物名去重，每种只保留一条记录",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

@@ -63,8 +63,9 @@ function getPlants() {
     wx.cloud.callFunction({
       name: 'login',
       success: function(loginRes) {
+        console.log('[getPlants] login返回:', JSON.stringify(loginRes))
         var openid = loginRes.result && loginRes.result.openid
-        console.log('[getPlants] login返回openid:', openid)
+        console.log('[getPlants] openid:', openid)
         if (openid) {
           db.collection('plants').where({ _openid: openid }).orderBy('createdAt', 'desc').get({
             success: function(res) { console.log('[getPlants] 用户记录:', res.data.length); resolve(res.data) },
@@ -79,7 +80,7 @@ function getPlants() {
         }
       },
       fail: function(err) {
-        console.log('[getPlants] login失败，查全部')
+        console.log('[getPlants] login失败:', JSON.stringify(err))
         db.collection('plants').orderBy('createdAt', 'desc').get({
           success: function(res) { resolve(res.data) },
           fail: function(err2) { reject(err2) }

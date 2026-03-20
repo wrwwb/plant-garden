@@ -128,10 +128,17 @@ Page({
     try {
       const db = wx.cloud.database()
       // 先调login云函数拿openid
-      const loginRes = await new Promise(function(resolve, reject) {
-        wx.cloud.callFunction({ name: 'login', success: resolve, fail: reject })
-      })
-      const openid = loginRes.result && loginRes.result.openid
+      this.log('正在调用login云函数...')
+      let openid = null
+      try {
+        const loginRes = await new Promise(function(resolve, reject) {
+          wx.cloud.callFunction({ name: 'login', success: resolve, fail: reject })
+        })
+        this.log('login返回: ' + JSON.stringify(loginRes))
+        openid = loginRes.result && loginRes.result.openid
+      } catch(e) {
+        this.log('login调用失败: ' + JSON.stringify(e))
+      }
       this.log('openid: ' + (openid || '未获取到'))
       if (!openid) { this.log('❌ 无法获取openid，请检查login云函数部署'); return }
       // 按openid过滤

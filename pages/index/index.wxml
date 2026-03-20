@@ -14,7 +14,7 @@
 
   <!-- 统计 -->
   <view class="stats-grid">
-    <view class="stat-card" >
+    <view class="stat-card">
       <view class="stat-number">{{plants.length}}</view>
       <view class="stat-label">🌸 植物总数</view>
     </view>
@@ -35,16 +35,12 @@
   </view>
 
   <!-- 加载中 -->
-  <view wx:if="{{loading}}" class="loading">
-    <text>加载中...</text>
-  </view>
+  <view wx:if="{{loading}}" class="loading"><text>加载中...</text></view>
 
   <!-- 错误提示 -->
-  <view wx:elif="{{error}}" class="error">
-    <text>⚠️ {{error}}</text>
-  </view>
+  <view wx:elif="{{error}}" class="error"><text>⚠️ {{error}}</text></view>
 
-  <!-- 空状态提示 -->
+  <!-- 空状态 -->
   <view wx:elif="{{!loading && !error && plants.length === 0}}" class="empty-state">
     <view class="empty-icon">🌱</view>
     <view class="empty-title">还没有植物呢</view>
@@ -56,46 +52,44 @@
     <view class="section">
       <view class="section-title">🌿 我的植物们</view>
 
-      <!-- 植物名字快速导航 -->
+      <!-- 快速导航 -->
       <view class="plant-nav">
-        <view wx:for="{{plants}}" wx:key="name" class="plant-nav-item" bindtap="scrollToPlant" data-index="{{index}}">
+        <view wx:for="{{plants}}" wx:key="recordId" class="plant-nav-item" bindtap="scrollToPlant" data-index="{{index}}">
           {{item.name}}
         </view>
       </view>
 
-      <view wx:for="{{plants}}" wx:key="name" id="plant-{{index}}" class="plant-card {{item.needWater ? 'urgent' : ''}}" style="background: {{item.cardColor || 'white'}}" data-index="{{index}}" bindtap="showGroupDetail" data-name="{{item.name}}" data-recordids="{{item.recordIds}}">
+      <!-- 植物卡片（每盆独立） -->
+      <view wx:for="{{plants}}" wx:key="recordId" id="plant-{{index}}" class="plant-card {{item.needWater ? 'urgent' : ''}}" style="background: {{item.cardColor || 'white'}}">
       <view class="plant-header">
         <view class="plant-title">
           <text class="plant-name">{{item.name}}</text>
-          <text wx:if="{{item.toxicityLevel !== '无刺激' && item.toxicityLevel !== '无刺激'}}" class="plant-poison toxic-light">⚠️ {{item.toxicityLevel}}</text>
+          <text wx:if="{{item.toxicityLevel !== '无刺激'}}" class="plant-poison toxic-light">⚠️ {{item.toxicityLevel}}</text>
         </view>
-        <view wx:if="{{item.scientificName || item.family}}" class="plant-sci">{{item.scientificName}}{{item.scientificName && item.family ? ' · ' : ''}}{{item.family}}</view>
+        <view wx:if="{{item.scientificName}}" class="plant-sci">{{item.scientificName}}</view>
         <view class="plant-location">📍 {{item.location}}</view>
         <view wx:if="{{item.toxicitySource}}" class="toxic-reason">☠️ {{item.toxicitySource}}</view>
       </view>
 
-      <!-- 植物简介 -->
+      <!-- 简介 -->
       <view wx:if="{{item.plantDesc}}" class="plant-desc">{{item.plantDesc}}</view>
 
-      <!-- 详细资料展示 -->
+      <!-- 资料标签 -->
       <view class="plant-detail-tags">
         <view wx:if="{{item.waterFrequency}}" class="detail-tag">💧 {{item.waterFrequency}}</view>
         <view wx:if="{{item.light}}" class="detail-tag">☀️ 光照：{{item.light}}</view>
         <view wx:if="{{item.temperature}}" class="detail-tag">🌡️ 温度：{{item.temperature}}</view>
         <view wx:if="{{item.fertilizer}}" class="detail-tag">🌱 施肥：{{item.fertilizer}}</view>
         <view wx:if="{{item.humidity}}" class="detail-tag">💨 湿度：{{item.humidity}}</view>
-        <view wx:if="{{item.origin}}" class="detail-tag">🌏 原产地：{{item.origin}}</view>
-        <view wx:if="{{item.growthSeason}}" class="detail-tag">🌱 生长期：{{item.growthSeason}}</view>
-        <view wx:if="{{item.heatResist}}" class="detail-tag">🌡️ 耐热：{{item.heatResist}}</view>
-        <view wx:if="{{item.coldResist}}" class="detail-tag">❄️ 耐寒：{{item.coldResist}}</view>
-        <view wx:if="{{item.soil}}" class="detail-tag">🪴 土壤：{{item.soil}}</view>
+        <view wx:if="{{item.origin}}" class="detail-tag">🌏 {{item.origin}}</view>
       </view>
 
+      <!-- 时间信息 -->
       <view class="time-section">
         <view class="time-row">
           <view class="time-item half">
             <view class="time-label">💧 上次浇水</view>
-            <picker mode="date" value="{{item.lastWaterDate}}" bindchange="editLastWater" data-index="{{index}}" data-id="{{item.recordIds[0]}}">
+            <picker mode="date" value="{{item.lastWaterDate}}" bindchange="editLastWater" data-index="{{index}}" data-id="{{item.recordId}}">
               <view class="time-value time-edit">{{item.lastWaterTime}} ✏️</view>
             </picker>
           </view>
@@ -116,37 +110,16 @@
         </view>
       </view>
 
+      <!-- 操作按钮 -->
       <view class="plant-actions">
-        <button class="btn water-btn" catchtap="waterGroup" data-recordids="{{item.recordIds}}">💧 浇水</button>
-        <button class="btn fertilizer-btn" catchtap="fertilizeGroup" data-recordids="{{item.recordIds}}">🌱 施肥</button>
+        <button class="btn water-btn" catchtap="waterPlant" data-id="{{item.recordId}}" data-name="{{item.name}}">💧 浇水</button>
+        <button class="btn fertilizer-btn" catchtap="fertilizePlant" data-id="{{item.recordId}}" data-name="{{item.name}}">🌱 施肥</button>
       </view>
 
       <!-- 删除按钮 -->
-      <view class="delete-btn" catchtap="showGroupDetail" data-name="{{item.name}}" data-recordids="{{item.recordIds}}">✕</view>
+      <view class="delete-btn" catchtap="deletePlant" data-id="{{item.recordId}}" data-name="{{item.name}}">✕</view>
       <view class="back-top-btn" catchtap="scrollToTop">↑</view>
     </view>
-    </view>
-  </view>
-
-  <!-- 分组详情弹窗 -->
-  <view wx:if="{{showGroupModal}}" class="modal-mask" bindtap="closeGroupModal">
-    <view class="modal-sheet" catchtap="preventBubble">
-      <view class="sheet-header">
-        <text class="sheet-title">📋 {{groupDetail.name}}</text>
-        <text class="sheet-close" bindtap="closeGroupModal">✕</text>
-      </view>
-      <scroll-view class="sheet-body" scroll-y>
-        <view wx:for="{{groupDetail.records}}" wx:key="recordId" class="sheet-row {{_selectedRecords[item.recordId] ? 'selected' : ''}}" bindtap="toggleDeleteRecord" data-id="{{item.recordId}}">
-          <text class="row-num {{item._selected ? 'active' : ''}}">{{index + 1}}</text>
-          <text class="row-name">{{item.location}}</text>
-          <text class="row-arrow {{item._selected ? 'up' : ''}}">›</text>
-        </view>
-      </scroll-view>
-      <view class="sheet-footer">
-        <button class="btn del-btn" bindtap="deleteSelectedRecords">
-          🗑️ 删除{{_selectedCount > 0 ? ' (' + _selectedCount + ')' : ''}}
-        </button>
-      </view>
     </view>
   </view>
 </view>

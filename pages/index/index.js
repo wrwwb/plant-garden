@@ -10,8 +10,13 @@ Page({
     needFertilizerCount: 0,
     loading: true,
     error: '',
-     currentUserId: '',
-    cityName: ''
+    currentUserId: '',
+    cityName: '',
+    _allRecords: [],
+    showGroupModal: false,
+    groupDetail: {},
+    _selectedRecords: {},
+    _selectedCount: 0
   },
 
   // 定时检查：每天首次打开时更新所有植物的下次浇水时间
@@ -398,7 +403,9 @@ Page({
         needWaterCount: plants.filter(p => p.needWater).length,
         needFertilizerCount: plants.filter(p => p.needFertilizer).length,
         loading: false,
-        showGroupModal: false
+        showGroupModal: false,
+        _selectedRecords: {},
+        _selectedCount: 0
       })
     }).catch(err => {
       console.error('加载植物失败:', err)
@@ -527,7 +534,8 @@ Page({
       if (!date || isNaN(date.getTime())) return '-'
       return `${date.getMonth() + 1}月${date.getDate()}日`
     }
-    const ids = Array.isArray(recordids) ? recordids : recordids.split(',')
+    const ids = Array.isArray(recordids) ? recordids : (recordids ? recordids.split(',') : [])
+    if (!ids.length) return
     const detailRecords = allRecords
       .filter(r => ids.includes(r._id || r.recordId || ''))
       .map(r => {
@@ -537,7 +545,6 @@ Page({
         return {
           recordId: r._id || r.recordId || '',
           name: f['name'] || f['花名'] || '-',
-          _selected: false,
           location: f['location'] || f['推荐摆放位置'] || '-',
           nextWaterTime: formatDate(nextW),
           nextFertilizerTime: formatDate(nextF),
@@ -545,7 +552,15 @@ Page({
           needFertilizer: nextF <= new Date(now)
         }
       })
-    this.setData({ groupDetail: { name, records: detailRecords, recordIdsStr: ids.join(','), _selectedCount: 0 }, showGroupModal: true })
+    // 重置选中状态
+    const selectedRecords = {}
+    detailRecords.forEach(r => { selectedRecords[r.recordId] = false })
+    this.setData({
+      groupDetail: { name, records: detailRecords },
+      _selectedRecords: selectedRecords,
+      _selectedCount: 0,
+      showGroupModal: true
+    })
   },
 
   preventBubble() {
@@ -553,33 +568,24 @@ Page({
   },
 
   closeGroupModal() {
-    this.setData({ showGroupModal: false })
+    this.setData({ showGroupModal: false, _selectedRecords: {}, _selectedCount: 0 })
   },
 
   // 勾选/取消勾选要删除的记录
   toggleDeleteRecord(e) {
     const { id } = e.currentTarget.dataset
-    const detail = this.data.groupDetail
-    if (!detail || !detail.records) return
-    let selectedCount = 0
-    const records = detail.records.map(r => {
-      if (r.recordId === id) {
-        const newSelected = !r._selected
-        if (newSelected) selectedCount++
-      } else if (r._selected) {
-        selectedCount++
-      }
-      if (r.recordId === id) return { ...r, _selected: !r._selected }
-      return r
-    })
-    this.setData({ groupDetail: { ...detail, records, _selectedCount: selectedCount } })
+    const selectedRecords = this.data._selectedRecords || {}
+    selectedRecords[id] = !selectedRecords[id]
+    const count = Object.values(selectedRecords).filter(Boolean).length
+    this.setData({ _selectedRecords: selectedRecords, _selectedCount: count })
   },
 
   // 删除选中的记录
   deleteSelectedRecords() {
     const detail = this.data.groupDetail
     if (!detail || !detail.records) return
-    const selected = detail.records.filter(r => r._selected)
+    const selectedRecords = this.data._selectedRecords || {}
+    const selected = detail.records.filter(r => selectedRecords[r.recordId])
     if (selected.length === 0) {
       wx.showToast({ title: '请先点击要删除的编号', icon: 'none' })
       return

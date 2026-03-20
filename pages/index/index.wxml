@@ -16,7 +16,7 @@
   <view class="stats-grid">
     <view class="stat-card">
       <view class="stat-number">{{plants.length}}</view>
-      <view class="stat-label">🌸 植物总数</view>
+      <view class="stat-label">🌸 植物种类</view>
     </view>
     <view class="stat-card" bindtap="showNeedsWater">
       <view class="stat-number">{{needWaterCount}}</view>
@@ -47,27 +47,27 @@
     <view class="empty-desc">点击下方「添加植物」开始记录你的植物吧~</view>
   </view>
 
-  <!-- 植物列表 -->
+  <!-- 植物列表（分组卡片） -->
   <view wx:else class="plant-scroll">
     <view class="section">
       <view class="section-title">🌿 我的植物们</view>
 
       <!-- 快速导航 -->
       <view class="plant-nav">
-        <view wx:for="{{plants}}" wx:key="recordId" class="plant-nav-item" bindtap="scrollToPlant" data-index="{{index}}">
-          {{item.name}}
+        <view wx:for="{{plants}}" wx:key="name" class="plant-nav-item" bindtap="scrollToPlant" data-index="{{index}}">
+          {{item.rawName}}
         </view>
       </view>
 
-      <!-- 植物卡片（每盆独立） -->
-      <view wx:for="{{plants}}" wx:key="recordId" id="plant-{{index}}" class="plant-card {{item.needWater ? 'urgent' : ''}}" style="background: {{item.cardColor || 'white'}}">
+      <!-- 植物卡片 -->
+      <view wx:for="{{plants}}" wx:key="name" id="plant-{{index}}" class="plant-card {{item.needWater ? 'urgent' : ''}}" style="background: {{item.cardColor || 'white'}}">
       <view class="plant-header">
         <view class="plant-title">
           <text class="plant-name">{{item.name}}</text>
           <text wx:if="{{item.toxicityLevel !== '无刺激'}}" class="plant-poison toxic-light">⚠️ {{item.toxicityLevel}}</text>
         </view>
         <view wx:if="{{item.scientificName}}" class="plant-sci">{{item.scientificName}}</view>
-        <view class="plant-location">📍 {{item.location}}</view>
+        <view class="plant-location">📍 {{item.location}}{{item.count > 1 ? ' (共' + item.count + '盆)' : ''}}</view>
         <view wx:if="{{item.toxicitySource}}" class="toxic-reason">☠️ {{item.toxicitySource}}</view>
       </view>
 
@@ -89,7 +89,7 @@
         <view class="time-row">
           <view class="time-item half">
             <view class="time-label">💧 上次浇水</view>
-            <picker mode="date" value="{{item.lastWaterDate}}" bindchange="editLastWater" data-index="{{index}}" data-id="{{item.recordId}}">
+            <picker mode="date" value="{{item.lastWaterDate}}" bindchange="editLastWater" data-index="{{index}}" data-id="{{item.recordIds[0]}}">
               <view class="time-value time-edit">{{item.lastWaterTime}} ✏️</view>
             </picker>
           </view>
@@ -110,16 +110,36 @@
         </view>
       </view>
 
-      <!-- 操作按钮 -->
+      <!-- 操作按钮（批量操作） -->
       <view class="plant-actions">
-        <button class="btn water-btn" catchtap="waterPlant" data-id="{{item.recordId}}" data-name="{{item.name}}">💧 浇水</button>
-        <button class="btn fertilizer-btn" catchtap="fertilizePlant" data-id="{{item.recordId}}" data-name="{{item.name}}">🌱 施肥</button>
+        <button class="btn water-btn" catchtap="waterPlant" data-recordids="{{item.recordIds}}" data-name="{{item.rawName}}">💧 浇水</button>
+        <button class="btn fertilizer-btn" catchtap="fertilizePlant" data-recordids="{{item.recordIds}}" data-name="{{item.rawName}}">🌱 施肥</button>
       </view>
 
       <!-- 删除按钮 -->
-      <view class="delete-btn" catchtap="deletePlant" data-id="{{item.recordId}}" data-name="{{item.name}}">✕</view>
+      <view class="delete-btn" catchtap="showDeleteModal" data-index="{{index}}">✕</view>
       <view class="back-top-btn" catchtap="scrollToTop">↑</view>
     </view>
+    </view>
+  </view>
+
+  <!-- 删除确认弹窗 -->
+  <view wx:if="{{showDelete}}" class="modal-mask" bindtap="closeDeleteModal">
+    <view class="modal-sheet" catchtap="preventBubble">
+      <view class="sheet-header">
+        <text class="sheet-title">{{deletePlantName}} 要删哪几盆？</text>
+        <text class="sheet-close" bindtap="closeDeleteModal">✕</text>
+      </view>
+      <scroll-view class="sheet-body" scroll-y>
+        <view wx:for="{{deleteItems}}" wx:key="recordId" class="sheet-row" bindtap="toggleDeleteItem" data-index="{{index}}">
+          <view class="row-num {{item._selected ? 'active' : ''}}">{{index + 1}}</view>
+          <text class="row-name">{{item.location}}</text>
+          <text class="row-arrow {{item._selected ? 'up' : ''}}">›</text>
+        </view>
+      </scroll-view>
+      <view class="sheet-footer">
+        <button class="del-btn" bindtap="deleteSelectedItems">删除 {{deleteCount ? '(' + deleteCount + ')' : ''}}</button>
+      </view>
     </view>
   </view>
 </view>

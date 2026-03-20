@@ -11,7 +11,11 @@ Page({
     loading: true,
     error: '',
     currentUserId: '',
-    cityName: ''
+    cityName: '',
+    showDelete: false,
+    deleteItems: [],
+    deleteCount: 0,
+    deletePlantName: ''
   },
 
   // 定时检查：每天首次打开时更新所有植物的下次浇水时间
@@ -389,7 +393,7 @@ Page({
         })
         return
       }
-      const plants = this.processRecords(rawPlants)
+      const plants = this.processRecordsGrouped(rawPlants)
       this.setData({
         plants,
         needWaterCount: plants.filter(p => p.needWater).length,
@@ -402,8 +406,8 @@ Page({
     })
   },
 
-  // 每盆一张卡片（不分组）
-  processRecords(records) {
+  // 按名字分组：一种植物一张卡片
+  processRecordsGrouped(records) {
     if (!records || records.length === 0) return []
 
     const now = Date.now()
@@ -422,40 +426,81 @@ Page({
       return isNaN(d.getTime()) ? null : d
     }
 
-    return records.map(r => {
-      const f = r.fields || r
+    const formatDate = (date) => {
+      if (!date || isNaN(date.getTime())) return '-'
+      return `${date.getMonth() + 1}月${date.getDate()}日`
+    }
 
+    // 按名字分组
+    const groups = {}
+    records.forEach(r => {
+      const f = r.fields || r
       const name = f['name'] || f['花名'] || '-'
+      if (!groups[name]) groups[name] = []
+      groups[name].push(r)
+    })
+
+    return Object.values(groups).map(group => {
+      const first = group[0]
+      const f = first.fields || first
+      const rawName = f['name'] || f['花名'] || '-'
+      const count = group.length
+      const name = count > 1 ? `${rawName} x${count}` : rawName
+
       const location = f['location'] || f['推荐摆放位置'] || '-'
       const waterFrequency = f['waterFrequency'] || f['waterFreq'] || f['浇水频率'] || '-'
+      const fertilizer = f['fertilizer'] || f['施肥'] || '-'
       const light = f['light'] || f['光照要求'] || '-'
       const temperature = f['temperature'] || f['温度要求'] || '-'
-      const fertilizer = f['fertilizer'] || f['施肥'] || '-'
       const humidity = f['humidity'] || f['湿度/特殊注意事项'] || '-'
       const toxicityLevel = f['toxicityLevel'] || f['毒性安全等级'] || '无刺激'
       const toxicitySource = f['toxicitySource'] || f['备注'] || ''
       const plantDesc = f['简介'] || ''
-      const waterInterval = f['waterInterval'] || 7
 
-      const lastWaterTime = parseDate(f['浇水时间']) || new Date(now - 7 * 86400000)
-      const nextWaterTime = parseDate(f['下次浇水时间']) || new Date(now + 7 * 86400000)
-      const lastFertilizerTime = parseDate(f['施肥时间']) || new Date(now - 30 * 86400000)
-      const nextFertilizerTime = parseDate(f['下次施肥时间']) || new Date(now + 30 * 86400000)
+      // 取最早到期的浇水/施肥时间
+      const nextWater = group.reduce((earliest, r) => {
+        const t = parseDate((r.fields || r)['下次浇水时间']) || new Date(now + 7 * 86400000)
+        return !earliest || t < earliest ? t : earliest
+      }, null) || new Date(now + 7 * 86400000)
 
-      const needWater = nextWaterTime <= today
-      const needFertilizer = nextFertilizerTime <= today
+      const nextFertilizer = group.reduce((earliest, r) => {
+        const t = parseDate((r.fields || r)['下次施肥时间']) || new Date(now + 30 * 86400000)
+        return !earliest || t < earliest ? t : earliest
+      }, null) || new Date(now + 30 * 86400000)
 
-      const colorIdx = (r._id || '').length > 0
-        ? (r._id.charCodeAt(0) + (r._id.charCodeAt(1) || 0)) % cardColors.length : 0
+      const lastWater = parseDate(f['浇水时间']) || new Date(now - 7 * 86400000)
+      const lastFertilizer = parseDate(f['施肥时间']) || new Date(now - 30 * 86400000)
 
-      const formatDate = (date) => {
-        if (!date || isNaN(date.getTime())) return '-'
-        return `${date.getMonth() + 1}月${date.getDate()}日`
-      }
+      const needWater = nextWater <= today
+      const needFertilizer = nextFertilizer <= today
+
+      // 记录详情（弹窗用）
+      const allRecords = group.map(r => {
+        const rf = r.fields || r
+        const recId = r._id || r.recordId || ''
+        const recNextW = parseDate(rf['下次浇水时间']) || new Date(now + 7 * 86400000)
+        const recNextF = parseDate(rf['下次施肥时间']) || new Date(now + 30 * 86400000)
+        return {
+          recordId: recId,
+          name: rf['name'] || rf['花名'] || rawName,
+          location: rf['location'] || rf['推荐摆放位置'] || '-',
+          nextWaterTime: formatDate(recNextW),
+          nextFertilizerTime: formatDate(recNextF),
+          needWater: recNextW <= today,
+          needFertilizer: recNextF <= today
+        }
+      })
+
+      const colorIdx = (first._id || '').length > 0
+        ? (first._id.charCodeAt(0) + (first._id.charCodeAt(1) || 0)) % cardColors.length : 0
 
       return {
-        recordId: r._id || r.recordId || '',
         name,
+        displayName: name,
+        rawName,
+        count,
+        recordIds: group.map(r => r._id || r.recordId || ''),
+        allRecords,
         location,
         waterFrequency,
         fertilizer,
@@ -468,17 +513,10 @@ Page({
         scientificName: f['scientificName'] || '',
         family: f['family'] || '',
         origin: f['origin'] || '',
-        growthSeason: f['growthSeason'] || '',
-        heatResist: f['heatResist'] || '',
-        coldResist: f['coldResist'] || '',
-        soil: f['soil'] || '',
-        lastWaterTime: formatDate(lastWaterTime),
-        lastWaterDate: lastWaterTime instanceof Date
-          ? lastWaterTime.toISOString().slice(0, 10)
-          : new Date(lastWaterTime).toISOString().slice(0, 10),
-        nextWaterTime: formatDate(nextWaterTime),
-        lastFertilizerTime: formatDate(lastFertilizerTime),
-        nextFertilizerTime: formatDate(nextFertilizerTime),
+        lastWaterTime: formatDate(lastWater),
+        nextWaterTime: formatDate(nextWater),
+        lastFertilizerTime: formatDate(lastFertilizer),
+        nextFertilizerTime: formatDate(nextFertilizer),
         needWater,
         needFertilizer,
         cardColor: cardColors[colorIdx]
@@ -486,10 +524,61 @@ Page({
     })
   },
 
+  // 打开删除弹窗
+  showDeleteModal(e) {
+    const plant = this.data.plants[e.currentTarget.dataset.index]
+    if (!plant || !plant.allRecords) return
+    const items = plant.allRecords.map(r => ({ ...r, _selected: false }))
+    this.setData({
+      showDelete: true,
+      deleteItems: items,
+      deleteCount: 0,
+      deletePlantName: plant.rawName
+    })
+  },
 
-  formatDate(date) {
-    if (!date || isNaN(date.getTime())) return '-'
-    return `${date.getMonth() + 1}月${date.getDate()}日`
+  closeDeleteModal() {
+    this.setData({ showDelete: false, deleteItems: [], deleteCount: 0, deletePlantName: '' })
+  },
+
+  preventBubble() {},
+
+  toggleDeleteItem(e) {
+    const idx = e.currentTarget.dataset.index
+    const items = this.data.deleteItems
+    items[idx]._selected = !items[idx]._selected
+    const count = items.filter(i => i._selected).length
+    this.setData({ deleteItems: items, deleteCount: count })
+  },
+
+  deleteSelectedItems() {
+    const items = this.data.deleteItems.filter(i => i._selected)
+    if (!items.length) return
+    wx.showModal({
+      title: '⚠️ 确认删除',
+      content: `确定删除 ${items.length} 盆「${this.data.deletePlantName}」吗？`,
+      success: (res) => {
+        if (!res.confirm) return
+        wx.showLoading({ title: '删除...' })
+        let idx = 0
+        const next = () => {
+          if (idx >= items.length) {
+            wx.hideLoading()
+            wx.showToast({ title: '🗑️ 已删除' })
+            this.closeDeleteModal()
+            this.loadPlants()
+            return
+          }
+          wx.cloud.callFunction({
+            name: 'deletePlant',
+            data: { recordId: items[idx++].recordId },
+            success: () => next(),
+            fail: () => { wx.hideLoading(); wx.showToast({ title: '删除失败', icon: 'none' }) }
+          })
+        }
+        next()
+      }
+    })
   },
 
   goToAdd() {
@@ -505,26 +594,58 @@ Page({
   },
 
   waterPlant(e) {
-    const { id, name } = e.currentTarget.dataset
+    const { recordids, name } = e.currentTarget.dataset
+    const ids = Array.isArray(recordids) ? recordids : (recordids ? recordids.split(',') : [])
     wx.showModal({
       title: '💧 确认浇水',
-      content: `确定给「${name}」浇水吗？`,
+      content: `确定给「${name}」${ids.length > 1 ? '的' + ids.length + '盆' : ''}浇水吗？`,
       success: (res) => {
         if (res.confirm) {
-          this.updateWaterTime(id, name)
+          wx.showLoading({ title: '浇水...' })
+          let idx = 0
+          const next = () => {
+            if (idx >= ids.length) {
+              wx.hideLoading()
+              wx.showToast({ title: `💧 ${name} 浇水完成！` })
+              this.loadPlants()
+              return
+            }
+            const id = ids[idx++]
+            this.updateWaterTime(id, name)
+          }
+          next()
         }
       }
     })
   },
 
   fertilizePlant(e) {
-    const { id, name } = e.currentTarget.dataset
+    const { recordids, name } = e.currentTarget.dataset
+    const ids = Array.isArray(recordids) ? recordids : (recordids ? recordids.split(',') : [])
     wx.showModal({
       title: '🌱 确认施肥',
-      content: `确定给「${name}」施肥吗？`,
+      content: `确定给「${name}」${ids.length > 1 ? '的' + ids.length + '盆' : ''}施肥吗？`,
       success: (res) => {
         if (res.confirm) {
-          this.updateFertilizerTime(id, name)
+          wx.showLoading({ title: '施肥...' })
+          let idx = 0
+          const next = () => {
+            if (idx >= ids.length) {
+              wx.hideLoading()
+              wx.showToast({ title: `🌱 ${name} 施肥完成！` })
+              this.loadPlants()
+              return
+            }
+            const id = ids[idx++]
+            const nextTime = Date.now() + 14 * 86400000
+            wx.cloud.callFunction({
+              name: 'updatePlant',
+              data: { recordId: id, data: { '下次施肥时间': new Date(nextTime), '施肥时间': new Date() } },
+              success: () => next(),
+              fail: () => { wx.hideLoading(); wx.showToast({ title: '施肥失败', icon: 'none' }) }
+            })
+          }
+          next()
         }
       }
     })

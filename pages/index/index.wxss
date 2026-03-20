@@ -444,3 +444,89 @@ page {
   border: 1rpx solid #ddd;
   z-index: 2;
 }
+
+/* 删除确认弹窗 */
+.modal-mask {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 999;
+  display: flex;
+  align-items: flex-end;
+}
+.modal-sheet {
+  background: #fff;
+  width: 100%;
+  border-radius: 28rpx 28rpx 0 0;
+  max-height: 72vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32rpx 36rpx 24rpx;
+  border-bottom: 1rpx solid #eee;
+  flex-shrink: 0;
+}
+.sheet-title {
+  font-size: 34rpx;
+  font-weight: bold;
+  color: #222;
+}
+.sheet-close {
+  font-size: 40rpx;
+  color: #bbb;
+  padding: 4rpx 12rpx;
+}
+.sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 200rpx;
+}
+.sheet-row {
+  display: flex;
+  align-items: center;
+  padding: 28rpx 36rpx;
+  border-bottom: 1rpx solid #f2f2f2;
+}
+.sheet-row:last-child { border-bottom: none; }
+.row-num {
+  width: 52rpx;
+  height: 52rpx;
+  line-height: 52rpx;
+  text-align: center;
+  border-radius: 50%;
+  background: #f0f0f0;
+  font-size: 24rpx;
+  color: #888;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+}
+.row-num.active { background: #f44336; color: #fff; }
+.row-name { flex: 1; font-size: 30rpx; color: #333; }
+.row-arrow {
+  font-size: 40rpx;
+  color: #ccc;
+  margin-left: 16rpx;
+  transition: transform 0.15s;
+}
+.row-arrow.up { color: #f44336; transform: rotate(90deg); }
+.sheet-footer {
+  padding: 20rpx 32rpx calc(20rpx + env(safe-area-inset-bottom)) 32rpx;
+  flex-shrink: 0;
+}
+.del-btn {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  background: #fff;
+  color: #f44336;
+  border: 2rpx solid #f44336;
+  border-radius: 44rpx;
+  font-size: 30rpx;
+  font-weight: bold;
+  text-align: center;
+}
